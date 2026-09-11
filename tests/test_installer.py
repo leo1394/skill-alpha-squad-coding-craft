@@ -82,6 +82,7 @@ class InstallerTest(unittest.TestCase):
             fake_user_home = Path(temporary_directory)
             environment = os.environ.copy()
             environment["HOME"] = str(fake_user_home)
+            environment["USERPROFILE"] = str(fake_user_home)
             environment["CODEX_HOME"] = ""
             result = subprocess.run(
                 [sys.executable, str(INSTALLER)],
