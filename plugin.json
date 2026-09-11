@@ -1,12 +1,12 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "alpha-squad-coding-craft",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Portable orchestration workflow with role templates and host-aware model selection.",
   "author": {
     "name": "Alpha Squad Coding Craft contributors"
   },
-  "license": "MIT",
+  "license": "Apache-2.0",
   "keywords": [
     "orchestration",
     "agents",

@@ -160,4 +160,8 @@ python3 -m unittest discover -s tests -p 'test_*.py'
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+Licensed under the [Apache License 2.0](LICENSE).
+
+## Sponsors
+
+Support development through [GitHub Sponsors](https://github.com/sponsors/leo1394).

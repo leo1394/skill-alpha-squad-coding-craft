@@ -13,6 +13,8 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 PLUGIN_NAME = "alpha-squad-coding-craft"
+EXPECTED_LICENSE = "Apache-2.0"
+EXPECTED_GITHUB_SPONSOR = "leo1394"
 EXPECTED_ROLES = {"explorer", "worker", "tester", "researcher", "reviewer"}
 SEMVER = re.compile(
     r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)"
@@ -56,7 +58,7 @@ def validate_portable_manifest(portable: dict[str, Any]) -> None:
     version = non_empty_string(portable.get("version"), "plugin.json version")
     assert SEMVER.fullmatch(version), "plugin.json version must be strict semver"
     non_empty_string(portable.get("description"), "plugin.json description")
-    non_empty_string(portable.get("license"), "plugin.json license")
+    assert portable.get("license") == EXPECTED_LICENSE
     author = portable.get("author")
     assert isinstance(author, dict), "plugin.json author must be an object"
     non_empty_string(author.get("name"), "plugin.json author.name")
@@ -76,6 +78,7 @@ def validate_codex_manifest(manifest: dict[str, Any], portable: dict[str, Any]) 
     assert manifest["version"] == portable["version"]
     assert SEMVER.fullmatch(manifest["version"])
     non_empty_string(manifest.get("description"), "Codex description")
+    assert manifest.get("license") == EXPECTED_LICENSE
     assert manifest.get("skills") == "./skills/"
     author = manifest.get("author")
     assert isinstance(author, dict) and set(author) <= {"name", "email", "url"}
@@ -121,6 +124,7 @@ def validate_claude_manifest(manifest: dict[str, Any], portable: dict[str, Any])
     assert manifest["version"] == portable["version"]
     assert SEMVER.fullmatch(manifest["version"])
     non_empty_string(manifest.get("description"), "Claude description")
+    assert manifest.get("license") == EXPECTED_LICENSE
     author = manifest.get("author")
     assert isinstance(author, dict) and set(author) <= {"name", "email", "url"}
     non_empty_string(author.get("name"), "Claude author.name")
@@ -207,6 +211,12 @@ def validate_roles() -> None:
         assert FORBIDDEN_MODEL_IDS.search(path.read_text(encoding="utf-8")) is None
 
 
+def validate_funding() -> None:
+    funding_path = ROOT / ".github/FUNDING.yml"
+    funding = yaml.safe_load(funding_path.read_text(encoding="utf-8"))
+    assert funding == {"github": EXPECTED_GITHUB_SPONSOR}
+
+
 def main() -> int:
     portable = read_json("plugin.json")
     validate_portable_manifest(portable)
@@ -214,6 +224,7 @@ def main() -> int:
     validate_claude_manifest(read_json(".claude-plugin/plugin.json"), portable)
     validate_skill()
     validate_roles()
+    validate_funding()
     installer = ROOT / "skills/alpha-squad-coding-craft/scripts/install_codex_agents.py"
     compile(installer.read_text(encoding="utf-8"), str(installer), "exec")
     distribution_installer = ROOT / "scripts/install_codex.py"
