@@ -1,0 +1,7 @@
+interface:
+  display_name: "Alpha Squad Coding Craft"
+  short_description: "Coordinate specialized agents across hosts"
+  default_prompt: "Use $alpha-squad-coding-craft to orchestrate this multi-file coding task."
+
+policy:
+  allow_implicit_invocation: true

@@ -1,0 +1,19 @@
+{
+  "name": "alpha-squad-coding-craft",
+  "version": "0.2.0",
+  "description": "Portable orchestration workflow with role templates and host-aware model selection.",
+  "author": { "name": "Alpha Squad Coding Craft contributors" },
+  "license": "MIT",
+  "keywords": ["orchestration", "agents", "delegation", "skills"],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Alpha Squad Coding Craft",
+    "shortDescription": "Coordinate specialized agents across hosts",
+    "longDescription": "A portable skill for planning, delegating, integrating, and reviewing complex coding work with host-aware model selection.",
+    "developerName": "Alpha Squad Coding Craft contributors",
+    "category": "Developer Tools",
+    "capabilities": ["Interactive", "Write"],
+    "defaultPrompt": ["Orchestrate this multi-file coding task."],
+    "brandColor": "#2563EB"
+  }
+}
