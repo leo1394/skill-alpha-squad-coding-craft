@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate manifests, YAML frontmatter, role templates, and installer syntax."""
+"""Validate manifests, YAML frontmatter, funding, roles, and installers."""
 from __future__ import annotations
 
 import json
@@ -14,8 +14,12 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 PLUGIN_NAME = "alpha-squad-coding-craft"
 EXPECTED_LICENSE = "Apache-2.0"
-EXPECTED_GITHUB_SPONSOR = "leo1394"
 EXPECTED_ROLES = {"explorer", "worker", "tester", "researcher", "reviewer"}
+FUNDING_PLATFORMS = {
+    "community_bridge", "github", "issuehunt", "ko_fi", "liberapay",
+    "open_collective", "patreon", "tidelift", "polar", "buy_me_a_coffee",
+    "thanks_dev", "custom",
+}
 SEMVER = re.compile(
     r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)"
     r"(?:-(?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*)(?:\."
@@ -214,7 +218,19 @@ def validate_roles() -> None:
 def validate_funding() -> None:
     funding_path = ROOT / ".github/FUNDING.yml"
     funding = yaml.safe_load(funding_path.read_text(encoding="utf-8"))
-    assert funding == {"github": EXPECTED_GITHUB_SPONSOR}
+    assert isinstance(funding, dict) and funding, "FUNDING.yml must not be empty"
+    assert set(funding) <= FUNDING_PLATFORMS, "FUNDING.yml has an unknown platform"
+    for platform, configured in funding.items():
+        values = configured if isinstance(configured, list) else [configured]
+        limit = 4 if platform in {"github", "custom"} else 1
+        assert 1 <= len(values) <= limit, f"invalid {platform} funding count"
+        assert all(
+            isinstance(value, str) and value.strip() for value in values
+        ), f"{platform} funding values must be non-empty strings"
+        if platform == "custom":
+            assert all(
+                value.startswith(("https://", "http://")) for value in values
+            ), "custom funding values must be URLs"
 
 
 def main() -> int:
