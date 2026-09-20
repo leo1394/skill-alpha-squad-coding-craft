@@ -142,14 +142,25 @@ def validate_skill() -> None:
     non_empty_string(metadata.get("description"), "Skill description")
     assert body.strip()
     assert "## Completion token usage" in body
-    assert "Omit the entire token-usage line" in body
+    assert "Omit the entire completion-statistics line" in body
     assert "`unavailable` placeholders" in body
-    assert "total 123" in body
+    assert "Token usage: total <tokens>" in body
+    assert "Elapsed time: about <hours> hours <minutes> minutes" in body
+    assert "Subagents created: <count>." in body
+    assert "Subagents created: 0" in body
+    assert "Token usage：" not in body
+    assert "Subagents created：" not in body
+    assert "Do not count failed spawn attempts" in body
     assert "Present a structured preference-selection window" in body
     assert "Treat selection as a blocking gate" in body
     assert "Pass the selected model and reasoning setting explicitly" in body
-    assert "<exact-session-model> <exact-session-reasoning>" in body
-    assert "<selected-model> <selected-reasoning>" in body
+    assert "For every new user-started task" in body
+    assert "first user-facing task-status sentence" in body
+    assert "task in the same chat or session" in body
+    assert "gate keeps the task orchestrator-only" in body
+    assert "Agent models: orchestrator, reviewer:" in body
+    assert "<exact-session-model> (<exact-session-reasoning>)" in body
+    assert "<selected-model> (<selected-reasoning>)" in body
     model_section = body.split("## Model and reasoning selection", 1)[1].split(
         "## Delegation gate", 1
     )[0]

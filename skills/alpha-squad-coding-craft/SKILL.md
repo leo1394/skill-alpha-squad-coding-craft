@@ -72,16 +72,29 @@ current host does not expose.
    assignment before announcing that the role started.
 10. Keep the validated selection only for the current user-started session. Ask
     again in every new session, after an availability change, or when the user
-    requests a change.
+    requests a change. Reusing the selection never suppresses the per-task
+    announcement below.
 
-Before the first delegated call, announce the assignments in one line:
+For every new user-started task while this skill is active, including a later
+task in the same chat or session, resolve or revalidate the assignments before
+substantive work. The first user-facing task-status sentence must be exactly one
+model-assignment line in this format:
 
-`orchestrator、reviewer：<exact-session-model> <exact-session-reasoning>；explorer、worker、tester、researcher：<selected-model> <selected-reasoning>。`
+`Agent models: orchestrator, reviewer: <exact-session-model> (<exact-session-reasoning>); explorer, worker, tester, researcher: <selected-model> (<selected-reasoning>).`
 
-Use the host's exact user-facing model and reasoning names. This line must not
-contain placeholders or vague labels such as `default`, `managed`, `inherited`,
-`unknown`, `unspecified`, or `unavailable`. If any exact value is unresolved,
-the model-selection gate remains incomplete and no delegated role may start.
+Print this sentence on every user-started task even when the assignment is
+unchanged, the selection was cached earlier in the session, or the delegation
+gate keeps the task orchestrator-only. Do not print a skill-activation notice,
+plan, progress update, or other task-status sentence before it. A required
+structured selection window or blocking chat selection question is a
+prerequisite interaction; immediately after selection, make the model line the
+first task-status sentence.
+
+Use the host's exact user-facing model and reasoning names. The model line must
+not contain placeholders or vague labels such as `default`, `managed`,
+`inherited`, `unknown`, `unspecified`, or `unavailable`. If any exact value is
+unresolved, the model-selection gate remains incomplete and substantive work
+may not start.
 
 Do not use a filesystem or command approval dialog for model selection. Model
 choice uses the host's preference-selection UI. An ordinary chat question is
@@ -140,41 +153,46 @@ actually started that role and returned a result.
 Before finishing a task that used this skill, query the host's native usage
 accounting for the orchestrator and every spawned agent run. Prefer the same
 authoritative task or goal usage source the host uses for its built-in final
-usage summary.
+usage summary. Record the task start and completion timestamps and compute the
+elapsed wall-clock time, rounded to the nearest whole minute.
 
 Track every actual orchestrator and subagent run or attempt with its stable run
-ID. Retries and resumed runs consume tokens and must each be counted once. Only
-deduplicate repeated usage records for the same stable run ID; conflicting
-records make the total unavailable.
+ID. Also track every successfully created subagent by its stable agent or child
+thread ID. Retries and resumed runs consume tokens and must each be counted
+once. Only deduplicate repeated usage records for the same stable run ID;
+conflicting records make the total unavailable.
 
-If the host supplies an authoritative task or goal total that explicitly
-includes the orchestrator and every child run, use that total directly. Never
-add an inclusive parent total to child totals. Otherwise sum exclusive per-run
-`total_tokens` records after confirming that every tracked run is present. If a
+Sum exclusive per-run `total_tokens` records after confirming that every
+tracked orchestrator and subagent run is present. Compute the subagent subtotal
+from all child runs, including retries and resumed runs, then compute the
+overall total as orchestrator plus subagents. An authoritative inclusive task
+or goal total may verify that result, but never add it to per-run totals. If a
 run has no total, sum input and output tokens only when the host documents those
 counters as non-overlapping. Never estimate from text length or context-window
 size.
 
-Only print a token-usage line when an authoritative, complete overall total can
-be established for the orchestrator and every subagent run. Include role totals
-only for roles whose authoritative totals are available, followed by the
-overall total:
+Only print the completion statistics when authoritative orchestrator, subagent,
+and overall totals can all be established. The subagent subtotal must include
+every child role and every child run, and `total` must equal orchestrator plus
+subagents.
 
-`Token usage：orchestrator <tokens>；explorer <tokens>；worker <tokens>；reviewer <tokens>；total <tokens>。`
+Use exactly one English line in this format:
 
-When the host exposes only an authoritative inclusive total, print only that
-known total:
+`Token usage: total <tokens>; Elapsed time: about <hours> hours <minutes> minutes; Subagents created: <count>.`
 
-`Token usage：total 123。`
+Do not print separate token subtotals, a separate subagent-count line, full-width
+punctuation, or non-English labels in this completion statistic.
 
-The example role list is illustrative; also support `tester` and `researcher`,
-and combine multiple agents that used the same role. The overall total must
-include the orchestrator and every subagent.
+Count unique successful subagent creations by stable agent or child thread ID.
+Do not count failed spawn attempts. Resuming the same subagent does not increase
+the count; spawning a new subagent for a retry does. Include every role:
+`explorer`, `worker`, `tester`, `researcher`, and `reviewer`.
 
-If no authoritative inclusive total exists and any participating run is
-missing, or the host does not document whether a parent total includes child
-runs, do not invent a total. Omit the entire token-usage line. Never print
-`unavailable` placeholders or a partial token-usage line.
+If any participating run is missing or inclusion semantics are ambiguous, do
+not invent token totals. Omit the entire completion-statistics line and never
+print `unavailable` placeholders or a partial line. For an orchestrator-only
+task with complete usage data, use `Subagents created: 0` within the standard
+line.
 
 ## Portability
 

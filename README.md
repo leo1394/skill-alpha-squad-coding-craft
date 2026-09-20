@@ -114,22 +114,27 @@ The `orchestrator` and `reviewer` use the current session assignment. If a
 previous selection becomes unavailable, the skill opens selection again rather
 than silently substituting another model.
 
-Before delegation, the skill prints one compact assignment line with the exact
-model and reasoning names for all roles. It never replaces them with defaults,
-management labels, inheritance labels, or unavailable placeholders. When a host
-cannot enumerate, validate, apply, or report the selected combination, the
-skill stops before delegation and reports that limitation.
+For every user-started task while the skill is active, its first task-status
+sentence prints one compact assignment line with the exact model and reasoning
+names for all roles. This repeats for later tasks in the same chat or session,
+even when the cached selection is unchanged or the task remains
+orchestrator-only. The skill never replaces exact assignments with defaults,
+management labels, inheritance labels, or unavailable placeholders.
 
 ## Token usage summary
 
 At completion, the skill requests the host's native usage counters, aggregates
-every actual attempt once by stable run ID, and prints an overall total that
-includes the orchestrator and every subagent. An authoritative parent total is
-used directly only when the host documents that it includes all child runs; it
-is never added to child totals. The skill never estimates missing counters. If
-only that inclusive total is available, the output contains only the known
-total. If the host does not expose a complete, unambiguous total, the skill
-omits the token-usage line entirely.
+every actual attempt once by stable run ID, and prints separate orchestrator and
+subagent totals internally. The reported total includes both and covers every
+child role, retry, and resumed run. The skill never estimates missing counters;
+if any run is missing, it omits the completion-statistics line entirely.
+
+The final one-line English summary reports total tokens, approximate wall-clock
+time rounded to minutes, and the number of successfully created subagents. It
+counts unique child IDs, excludes failed spawn attempts, and does not count a
+resumed child twice:
+
+`Token usage: total <tokens>; Elapsed time: about <hours> hours <minutes> minutes; Subagents created: <count>.`
 
 ## Repository layout
 

@@ -62,9 +62,16 @@ Use the host's native per-run or task usage records. Aggregate all orchestrator
 and spawned-agent attempts exactly once by stable run ID, including retries and
 resumed runs. Deduplicate only repeated records for the same run. A host may
 expose input, output, cached, reasoning, or total counters with different
-semantics; prefer a documented inclusive task total when it covers every child,
-and never add that parent total to child records. If inclusion semantics or
-complete subagent usage are unavailable, report that limitation instead of
-estimating. When the inclusive total is authoritative but per-role counters are
-absent, print only the known total. When a complete total cannot be established,
-omit the token-usage line entirely.
+semantics. Sum all exclusive child records into a `subagents` subtotal and add
+that subtotal to the orchestrator total. Use a documented inclusive task total
+only to verify the result, never as another summand. If inclusion semantics or
+complete subagent usage are unavailable, omit the token-usage line instead of
+estimating.
+
+Count unique successful child creations by stable agent or child thread ID.
+Failed spawn attempts do not count; resuming an existing child does not add one;
+a newly spawned retry does. Measure elapsed wall-clock time from task start to
+completion and round it to the nearest whole minute. Emit one English summary:
+`Token usage: total <tokens>; Elapsed time: about <hours> hours <minutes>
+minutes; Subagents created: <count>.` Omit the entire line when complete token
+usage cannot be established.
