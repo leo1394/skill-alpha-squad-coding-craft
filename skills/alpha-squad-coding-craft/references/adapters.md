@@ -48,7 +48,10 @@ References:
 ## Selection UI
 
 Hosts differ in popup APIs, permissions, model identifiers, and reasoning
-controls. On Codex, use `request_user_input` and issue the two requests
+controls. On Codex, inspect the tools exposed for the current mode. Prefer
+`request_user_input` only when it is callable in that mode; a Plan-only tool
+must not be called in Default mode. When `request_user_input_async` is available,
+use it and follow the asynchronous lifecycle below. Issue the two requests
 sequentially:
 
 1. One structured request with two required fields: Step 1 confirms the exact
@@ -72,6 +75,42 @@ dismissed a window, or has not yet clicked the final confirmation. When the
 host cannot enumerate, validate, bind, or report an exact combination, do not
 delegate the affected roles. Never print a model-assignment line containing a
 default, management, inheritance, or availability placeholder.
+
+### Asynchronous Codex input
+
+`request_user_input_async` returns immediately. Its `accepted: true` response
+means the question was accepted for display, not that the user answered it.
+Answers arrive later as user input. Neither the first preselected option nor
+a timer is consent.
+
+After issuing the two-field selection request, wait in the same turn. Use
+`clock.sleep` when exposed, with `duration_ms` no greater than 60000; it wakes
+early for new user input. If a wait completes without a submitted answer,
+continue waiting on the same stage. Brief commentary may explain the pending
+state, but do not emit `final`, create another picker, or mark the Goal blocked
+merely to yield. A final response is not an asynchronous wait primitive.
+
+Validate both submitted fields before opening Final confirmation. Keep that
+second request alive using the same wait behavior. On Confirm and continue,
+emit the required Agent models line and proceed. On Revise selections, return
+to the two-field request. On an explicit dismissal/reopen request, reissue only
+the affected stage; on interruption or continuation alone, preserve the stage
+and do not assume dismissal. Do not invent a pending-request query API when
+the host exposes none.
+
+### Lifecycle verification
+
+For a live host check, leave each window untouched for more than 60 seconds,
+then submit it. Verify the window remains usable, there is only one request
+per stage, no final response precedes submission, and no work starts before
+Final confirmation. Also check Revise selections and an unrelated user message:
+neither may silently confirm the assignment. A Goal continuation must preserve
+the pending stage rather than create a duplicate window.
+
+Session traces can verify request/submission/final ordering; they cannot prove
+that the client visually retained the window. Repository and installer tests
+also do not prove popup behavior. Report live UI verification as pending unless
+it was actually observed; do not claim a client-side UI fix from skill edits.
 
 ## Token accounting
 

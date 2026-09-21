@@ -118,6 +118,13 @@ dialog. If structured input is unavailable, it reports the limitation and
 waits. An unanswered or dismissed selection remains waiting for user input and
 does not by itself mark a Goal as blocked.
 
+On hosts with asynchronous structured input, a request acknowledgement is
+not a user answer. The skill keeps the turn alive while each window is pending,
+waits for the actual submission, and does not send a final response or recreate
+the window on a Goal continuation. It uses only input tools available in the
+current mode. This prevents the workflow from ending immediately after opening
+a picker; visual retention still depends on the host and requires a live check.
+
 The `orchestrator` and `reviewer` use the current session assignment. If a
 previous selection becomes unavailable, the skill opens selection again rather
 than silently substituting another model.

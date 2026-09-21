@@ -81,9 +81,12 @@ current host does not expose.
    cannot be presented and wait without starting substantive work or delegation.
 9. A pending, dismissed, or unanswered selection is a waiting-for-user-input
    state. It must not mark an active Goal as `blocked`, complete, or failed.
-   Keep the request pending or reopen the same structured window. Apply the
-   host's separate Goal-status policy only if an independent blocking condition
-   remains after the required interaction is complete.
+   Keep the existing request pending. Do not reopen it merely because a Goal
+   continues, a wait times out, or no answer has arrived. Reopen only after an
+   explicit user request or a host event confirming the request was dismissed
+   or cancelled; preserve any submitted selections. Apply the host's separate
+   Goal-status policy only if an independent blocking condition remains after
+   the required interaction is complete.
 10. A model and reasoning pair explicitly selected earlier in the same session
     satisfies Step 2 only after host validation and Final confirmation in this
     session. If a stored combination is unavailable or no longer supported,
@@ -122,6 +125,34 @@ choice uses the host's native structured preference-selection UI. The client
 may control the outer submit button's localized label; the final window must
 still contain an explicit **Confirm and continue** choice and must not continue
 until the user selects it and submits the window.
+
+## Structured input lifecycle
+
+Before opening either window, inspect the input tool's current availability
+and response semantics. A blocking tool waits for submitted answers; an async
+tool only acknowledges that the request was created. Do not call a tool that
+is restricted to a different collaboration mode.
+
+With asynchronous input, `accepted: true` is not a submitted answer. After
+creating a request, keep the current turn alive using the host's interruptible
+wait mechanism in bounded intervals (at most 60 seconds per call). A wait
+timeout changes no selection state. Do not send a final answer while a selection
+or Final confirmation request is pending: ending the turn can remove the
+interaction before the user submits it. Do not replace this wait with repeated
+final status messages or duplicate requests on Goal continuations.
+
+Track the current stage (selection pending, confirmation pending, confirmed),
+the exact submitted assignments, and the request identifier when the host
+provides one. Preserve them across continuation or compaction. Only an actual
+user submission advances the stage. Submit Final confirmation once both fields
+have valid answers; start work only after its explicit Confirm and continue
+submission. Preselected options, unrelated messages, elapsed time, and Goal
+wakeups are not submissions. If the user changes the task or asks to repair
+this selection workflow, handle that request rather than trapping the user in
+the pending gate; it does not approve the original task's assignments.
+
+For Codex tool selection and lifecycle verification scenarios, read
+[references/adapters.md](references/adapters.md#selection-ui).
 
 ## Delegation gate
 
