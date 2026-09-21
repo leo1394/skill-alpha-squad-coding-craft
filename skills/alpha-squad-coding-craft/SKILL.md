@@ -50,30 +50,51 @@ current host does not expose.
 3. Resolve the exact current-session model name and reasoning setting before
    any delegation. Do not replace either value with a default, an inferred
    value, or a runtime-management label.
-4. Before the first `explorer`, `worker`, `tester`, or `researcher` call in each
-   new user-started session, enumerate the model and reasoning combinations the
-   host can apply to those calls.
-5. Present a structured preference-selection window and require the user to
-   select both a model and a reasoning setting. Show only combinations the host
-   currently supports. A model and reasoning pair explicitly selected by the
-   user earlier in the same session satisfies this step only after host
-   validation.
-6. Treat selection as a blocking gate. Do not start `explorer`, `worker`,
-   `tester`, or `researcher` until both selections are known, validated, and can
-   be passed to the delegated call. Never continue without an explicit,
-   validated pair.
-7. If the structured selection tool is unavailable, ask for the two values in
-   chat and wait. If the host cannot enumerate, validate, or apply the selected
-   combination, report the limitation and do not delegate those roles.
-8. If a stored or previously selected combination is unavailable or no longer
-   supported, reopen selection instead of substituting another value.
-9. Pass the selected model and reasoning setting explicitly on every
-   `explorer`, `worker`, `tester`, and `researcher` call. Verify the effective
-   assignment before announcing that the role started.
-10. Keep the validated selection only for the current user-started session. Ask
-    again in every new session, after an availability change, or when the user
-    requests a change. Reusing the selection never suppresses the per-task
-    announcement below.
+4. On the first activation in each new user-started session, enumerate the model
+   and reasoning combinations the host can apply to delegated calls. Complete
+   the required interaction below even when the current task remains
+   orchestrator-only.
+5. Open one native structured selection window containing two required fields,
+   in this order. Do not collapse, skip, or replace either field:
+   - **Step 1 — orchestrator, reviewer:** show the exact current-session model
+     and reasoning pair and require the user to confirm it. These roles cannot
+     select a different pair inside this flow. If the user wants another pair,
+     wait for them to change the session settings, re-resolve the exact pair,
+     and restart Step 1.
+   - **Step 2 — explorer, worker, tester, researcher:** require the user to
+     select one model-and-reasoning pair from combinations the host currently
+     supports for delegated calls. Treat each pair as one atomic option so the
+     model and reasoning setting cannot become inconsistent.
+6. After both fields have answers, open a second native structured window named
+   **Final confirmation**. Show the exact assignment summary and require one of
+   these choices: **Confirm and continue** or **Revise selections**. Continue
+   only after **Confirm and continue**. On **Revise selections**, reopen the
+   two-field window at Step 1.
+7. Treat the full two-window interaction as a blocking gate. Do not start
+   substantive work or create any subagent until Step 1, Step 2, and Final
+   confirmation are complete. Never infer confirmation from silence, a timeout,
+   a previous session, or an unrelated approval.
+8. When a native structured user-input tool is available, it is mandatory for
+   both windows. Do not use ordinary chat, commentary, a filesystem approval,
+   or a command approval for either selection or Final confirmation. If no
+   structured user-input tool is available, report that the required interaction
+   cannot be presented and wait without starting substantive work or delegation.
+9. A pending, dismissed, or unanswered selection is a waiting-for-user-input
+   state. It must not mark an active Goal as `blocked`, complete, or failed.
+   Keep the request pending or reopen the same structured window. Apply the
+   host's separate Goal-status policy only if an independent blocking condition
+   remains after the required interaction is complete.
+10. A model and reasoning pair explicitly selected earlier in the same session
+    satisfies Step 2 only after host validation and Final confirmation in this
+    session. If a stored combination is unavailable or no longer supported,
+    reopen selection instead of substituting another value.
+11. Pass the selected model and reasoning setting explicitly on every
+    `explorer`, `worker`, `tester`, and `researcher` call. Verify the effective
+    assignment before announcing that the role started.
+12. Keep the confirmed assignment only for the current user-started session.
+    Run the full interaction again in every new session, after an availability
+    change, or when the user requests a change. Reusing the confirmed assignment
+    never suppresses the per-task announcement below.
 
 For every new user-started task while this skill is active, including a later
 task in the same chat or session, resolve or revalidate the assignments before
@@ -86,9 +107,9 @@ Print this sentence on every user-started task even when the assignment is
 unchanged, the selection was cached earlier in the session, or the delegation
 gate keeps the task orchestrator-only. Do not print a skill-activation notice,
 plan, progress update, or other task-status sentence before it. A required
-structured selection window or blocking chat selection question is a
-prerequisite interaction; immediately after selection, make the model line the
-first task-status sentence.
+structured selection and confirmation interaction is a prerequisite;
+immediately after Final confirmation, make the model line the first task-status
+sentence.
 
 Use the host's exact user-facing model and reasoning names. The model line must
 not contain placeholders or vague labels such as `default`, `managed`,
@@ -97,8 +118,10 @@ unresolved, the model-selection gate remains incomplete and substantive work
 may not start.
 
 Do not use a filesystem or command approval dialog for model selection. Model
-choice uses the host's preference-selection UI. An ordinary chat question is
-only the blocking fallback when that UI is unavailable.
+choice uses the host's native structured preference-selection UI. The client
+may control the outer submit button's localized label; the final window must
+still contain an explicit **Confirm and continue** choice and must not continue
+until the user selects it and submits the window.
 
 ## Delegation gate
 

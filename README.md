@@ -104,11 +104,19 @@ actual harness must provide skill loading, delegation, and user questions.
 ## Model selection
 
 The skill enumerates the models and reasoning controls exposed by the current
-host. It never assumes that a named model exists. Before the first
-`explorer`, `worker`, `tester`, or `researcher` call in every new session, it
-opens the host's native structured picker and requires both a model and a
-reasoning selection. If the picker is unavailable, it asks in chat and waits.
-No specialized agent starts until the host validates and can apply both values.
+host. It never assumes that a named model exists. On first activation in every
+new session, it opens one native structured window with two required fields:
+Step 1 confirms the current-session pair for `orchestrator` and `reviewer`, and
+Step 2 selects one supported model-and-reasoning pair for `explorer`, `worker`,
+`tester`, and `researcher`. It then opens a separate Final confirmation window
+that requires **Confirm and continue** before any substantive work or subagent
+creation begins.
+
+The structured windows are mandatory when the host provides them. The skill
+does not replace either window with a chat question or an unrelated permission
+dialog. If structured input is unavailable, it reports the limitation and
+waits. An unanswered or dismissed selection remains waiting for user input and
+does not by itself mark a Goal as blocked.
 
 The `orchestrator` and `reviewer` use the current session assignment. If a
 previous selection becomes unavailable, the skill opens selection again rather

@@ -48,13 +48,30 @@ References:
 ## Selection UI
 
 Hosts differ in popup APIs, permissions, model identifiers, and reasoning
-controls. Use the native structured preference picker whenever it is available,
-and show only model and reasoning combinations the host can bind to delegated
-calls. If the picker is unavailable, ask in chat and wait. Lack of a picker is
-never permission to continue without a choice. When the host cannot enumerate,
-validate, bind, or report an exact combination, do not delegate the affected
-roles. Never print a model-assignment line containing a default, management,
-inheritance, or availability placeholder.
+controls. On Codex, use `request_user_input` and issue the two requests
+sequentially:
+
+1. One structured request with two required fields: Step 1 confirms the exact
+   current-session pair for `orchestrator` and `reviewer`; Step 2 selects one
+   supported model-and-reasoning pair for `explorer`, `worker`, `tester`, and
+   `researcher`.
+2. A second structured request named **Final confirmation** that displays both
+   exact assignments and offers **Confirm and continue** and **Revise
+   selections**.
+
+Do not use ordinary chat for either request when the structured tool is
+available. Do not use a sandbox, filesystem, network, or command approval as a
+substitute. The client owns the outer submit button label, so require the user
+to choose **Confirm and continue** inside the final request and submit it. If
+the structured picker is unavailable, report the capability limitation and
+wait; do not proceed through a chat fallback.
+
+Keep a pending selection as waiting for user input. Do not mark a Goal
+`blocked`, complete, or failed merely because the user has not answered,
+dismissed a window, or has not yet clicked the final confirmation. When the
+host cannot enumerate, validate, bind, or report an exact combination, do not
+delegate the affected roles. Never print a model-assignment line containing a
+default, management, inheritance, or availability placeholder.
 
 ## Token accounting
 
