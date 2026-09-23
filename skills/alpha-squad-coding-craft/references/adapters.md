@@ -10,7 +10,8 @@ project-scoped agents use `.codex/agents/`. A role file can omit `model` and
 `model_reasoning_effort`, allowing the host's spawn configuration or parent
 session to resolve them. For `explorer`, `worker`, `tester`, and `researcher`,
 the orchestrator must pass the user's validated model and reasoning selection
-on every spawn. `reviewer` must use the exact current-session assignment.
+on every spawn. `reviewer` uses the exact current-session assignment in standalone
+mode; the optional Laya adapter may use the separately approved reviewer pair.
 
 On first activation, use `scripts/install_codex_agents.py` to install missing
 personal role files when the user and host permit the filesystem write. Never
@@ -51,21 +52,17 @@ Hosts differ in popup APIs, permissions, model identifiers, and reasoning
 controls. On Codex, inspect the tools exposed for the current mode. Prefer
 `request_user_input` only when it is callable in that mode; a Plan-only tool
 must not be called in Default mode. When `request_user_input_async` is available,
-use it and follow the asynchronous lifecycle below. Issue the two requests
-sequentially:
+use it and follow the asynchronous lifecycle below. Issue ONE structured request
+with four fields: current-session confirmation, execution-role model, reasoning,
+and **Final confirmation**. The last field offers **Confirm and continue**,
+**Revise selections**, and **Cancel**, covering all earlier answers. Do not claim
+the static question can display a live summary of unsubmitted answers. Do not
+list every model/effort combination or open a separate confirmation request.
 
-1. One structured request with two required fields: Step 1 confirms the exact
-   current-session pair for `orchestrator` and `reviewer`; Step 2 selects one
-   supported model-and-reasoning pair for `explorer`, `worker`, `tester`, and
-   `researcher`.
-2. A second structured request named **Final confirmation** that displays both
-   exact assignments and offers **Confirm and continue** and **Revise
-   selections**.
-
-Do not use ordinary chat for either request when the structured tool is
+Do not use ordinary chat for this request when the structured tool is
 available. Do not use a sandbox, filesystem, network, or command approval as a
 substitute. The client owns the outer submit button label, so require the user
-to choose **Confirm and continue** inside the final request and submit it. If
+to choose **Confirm and continue** in the final step and submit all fields. If
 the structured picker is unavailable, report the capability limitation and
 wait; do not proceed through a chat fallback.
 
@@ -83,27 +80,27 @@ means the question was accepted for display, not that the user answered it.
 Answers arrive later as user input. Neither the first preselected option nor
 a timer is consent.
 
-After issuing the two-field selection request, wait in the same turn. Use
+After issuing the single selection-and-confirmation request, wait in the same turn. Use
 `clock.sleep` when exposed, with `duration_ms` no greater than 60000; it wakes
 early for new user input. If a wait completes without a submitted answer,
 continue waiting on the same stage. Brief commentary may explain the pending
 state, but do not emit `final`, create another picker, or mark the Goal blocked
 merely to yield. A final response is not an asynchronous wait primitive.
 
-Validate both submitted fields before opening Final confirmation. Keep that
-second request alive using the same wait behavior. On Confirm and continue,
-emit the required Agent models line and proceed. On Revise selections, return
-to the two-field request. On an explicit dismissal/reopen request, reissue only
-the affected stage; on interruption or continuation alone, preserve the stage
+Validate all submitted fields and the final Confirm and continue answer together.
+Only then emit the required Agent models line and proceed. On Revise selections,
+reopen the same window preserving valid choices; Cancel changes nothing. On an
+explicit dismissal/reopen request, reissue the window; on interruption or
+continuation alone, preserve the stage
 and do not assume dismissal. Do not invent a pending-request query API when
 the host exposes none.
 
 ### Lifecycle verification
 
-For a live host check, leave each window untouched for more than 60 seconds,
+For a live host check, leave the window untouched for more than 60 seconds,
 then submit it. Verify the window remains usable, there is only one request
-per stage, no final response precedes submission, and no work starts before
-Final confirmation. Also check Revise selections and an unrelated user message:
+in total, no final response precedes submission, and no work starts before
+the final confirmation step is submitted. Also check Revise selections and an unrelated user message:
 neither may silently confirm the assignment. A Goal continuation must preserve
 the pending stage rather than create a duplicate window.
 
@@ -114,60 +111,16 @@ it was actually observed; do not claim a client-side UI fix from skill edits.
 
 ## Token accounting
 
-Follow the mandatory completion summary in `SKILL.md`. Metrics availability
-changes the values, never whether the final statistics line is emitted.
+On Codex, the orchestrator uses the read-only collector described in
+[token-accounting.md](token-accounting.md). Read that reference before collecting.
+No active Goal is required: a missing get_goal counter does not mean local usage
+is unavailable. Children report work results, not a mandatory telemetry block.
 
-On Codex, use native task/goal usage when exposed and its scope is explicit.
-An inclusive task total can be used without separate per-child counters if it
-covers all participants. A goal total must not be relabelled as a later task's
-usage. Quota tools such as account usage-limit displays report account budgets,
-not tokens consumed by this task. Do not use them for this summary. Do not invent
-a usage API, assume every host exposes per-agent metrics, or assume session
-counters include child agents. Request the completion record specified in
-`SKILL.md` in each delegated/resumed prompt, and reconcile it with native settled
-records when available. Child self-reports cannot create missing host telemetry.
-If the total is incomplete but exclusive current-task orchestrator usage is
-known, print `Token usage: orchestrator-only <tokens> (subagent usage incomplete)`.
-If neither source is available, print `Token usage: total unavailable (host does not expose complete task usage)`
-and retain elapsed time and subagent count on the same final line.
+Validate task scope, unique response counting, nested children, resumed turns,
+duplicate archived logs, missing child logs and malformed records with
+`tests/test_token_usage.py`. Never count a session lifetime total as a new task.
+Native quotas are not consumed tokens. Retain the existing elapsed-time and
+created-subagent reporting rules; statistics never justify ending a pending
+selection window.
 
-Record start time and child creation IDs during execution. Preserve the ledger
-through compaction and continuation. Reconcile descendant creations and usage
-through native run records or delegated results; missing descendants invalidate
-only the affected metrics. Read only the task-scoped records needed for these
-metrics; do not dump unrelated conversations or credentials. Report unavailable
-if the required records cannot be accessed.
-
-### Completion verification scenarios
-
-Check final-answer behavior against these cases; repository text validation and
-installer tests alone do not prove an agent actually follows the completion gate.
-
-- Orchestrator-only, complete accounting: final line has the verified total,
-  wall-clock duration, and `Subagents created: 0`.
-- No token API, known start time and two children: final line has token usage
-  unavailable with a reason, measured elapsed time, and child count 2.
-- Inclusive native task total but no child subtotals: use that total once when
-  its scope is documented to include all participants; retain the known count.
-- A successful child is resumed, another child spawn fails, and a new child is
-  created for retry: count two unique successful creations, include all tracked
-  token-consuming attempts, and never double-count cumulative snapshots.
-- One child usage record is missing and no inclusive total exists: use
-  orchestrator-only usage if verified; otherwise mark tokens unavailable. Known
-  elapsed time and creation count still appear.
-- A child reports a pre-final cumulative counter and the host later supplies a
-  settled counter: use the settled value once, not the sum. Without settlement,
-  identify pre-final checkpoint usage explicitly; never estimate missing tokens.
-- A child lacks native counters: it still returns its result and an unavailable
-  accounting record with a reason, without retrying the work for telemetry.
-- Rounded elapsed durations of 8, 60, 61, and 128 minutes render as `about 8
-  minutes`, `about 1 hour 0 minutes`, `about 1 hour 1 minute`, and `about 2 hours
-  8 minutes`. No zero-hour component is emitted.
-- Compaction loses the start timestamp: recover it from task events or mark
-  elapsed time unavailable; never substitute zero or omit the line.
-- A paused, cancelled, or incomplete task produces a final answer after work:
-  append the same three metrics through the latest observable checkpoint.
-- Model selection remains pending: keep waiting without emitting a premature
-  final answer merely to satisfy the summary requirement.
-- A new task in a long-running conversation: report the new task's accounting
-  scope, not lifetime conversation tokens or agents from previous tasks.
+For other hosts use authoritative scoped usage, or state why it is unavailable.

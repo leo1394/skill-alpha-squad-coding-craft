@@ -151,13 +151,14 @@ def validate_skill() -> None:
     assert "Token usage：" not in body
     assert "Subagents created：" not in body
     assert "Do not count failed spawn attempts" in body
-    assert "Open one native structured selection window" in body
+    assert "Open ONE native structured window" in body
     assert "Step 1 — orchestrator, reviewer" in body
-    assert "Step 2 — explorer, worker, tester, researcher" in body
+    assert "Step 2 — Model (explorer, worker, tester, researcher)" in body
+    assert "Step 3 — Reasoning" in body
     assert "Final confirmation" in body
     assert "Confirm and continue" in body
     assert "Revise selections" in body
-    assert "Treat the full two-window interaction as a blocking gate" in body
+    assert "Treat the complete single-window interaction as a blocking gate" in body
     assert "Do not use ordinary chat" in body
     assert "must not mark an active Goal as `blocked`" in body
     assert "Pass the selected model and reasoning setting explicitly" in body

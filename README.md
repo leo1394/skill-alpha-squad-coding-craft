@@ -105,21 +105,20 @@ actual harness must provide skill loading, delegation, and user questions.
 
 The skill enumerates the models and reasoning controls exposed by the current
 host. It never assumes that a named model exists. On first activation in every
-new session, it opens one native structured window with two required fields:
-Step 1 confirms the current-session pair for `orchestrator` and `reviewer`, and
-Step 2 selects one supported model-and-reasoning pair for `explorer`, `worker`,
-`tester`, and `researcher`. It then opens a separate Final confirmation window
-that requires **Confirm and continue** before any substantive work or subagent
-creation begins.
+new session, ONE native window contains current-session confirmation, execution
+model selection, reasoning selection, and **Final confirmation** as the last
+step. Submit all steps with **Confirm and continue** before work or delegation
+starts. There is no second confirmation popup; invalid choices or **Revise
+selections** reopen the same window. Locally disabled efforts are filtered out.
 
-The structured windows are mandatory when the host provides them. The skill
-does not replace either window with a chat question or an unrelated permission
+The structured window is mandatory when the host provides it. The skill
+does not replace it with a chat question or an unrelated permission
 dialog. If structured input is unavailable, it reports the limitation and
 waits. An unanswered or dismissed selection remains waiting for user input and
 does not by itself mark a Goal as blocked.
 
 On hosts with asynchronous structured input, a request acknowledgement is
-not a user answer. The skill keeps the turn alive while each window is pending,
+not a user answer. The skill keeps the turn alive while the window is pending,
 waits for the actual submission, and does not send a final response or recreate
 the window on a Goal continuation. It uses only input tools available in the
 current mode. This prevents the workflow from ending immediately after opening
@@ -128,6 +127,26 @@ a picker; visual retention still depends on the host and requires a live check.
 The `orchestrator` and `reviewer` use the current session assignment. If a
 previous selection becomes unavailable, the skill opens selection again rather
 than silently substituting another model.
+
+### Optional Oh My Laya routing
+
+Alpha Squad works independently; Laya is not required. With Oh My Laya and
+`laya-model-advisor` installed, ask:
+
+```text
+Use $alpha-squad-coding-craft with $laya-model-advisor to configure subagent routing.
+```
+
+The same setup window includes policy, execution model/effort ceiling, reviewer
+model/effort, and final confirmation. The orchestrator never changes. Execution
+roles follow Laya's policy; automatic recommendations stay on your chosen model
+and within its effort ceiling. Difficult, high-risk or uncertain reviews use the
+orchestrator's exact pair; ordinary reviews use your reviewer configuration.
+
+Alpha Squad applies accepted recommendations to native subagent spawn parameters;
+MCP does not spawn agents or grant execution permissions. Missing or incompatible
+Laya falls back to standalone manual selection. Oh My Laya installs this skill
+from this repository's latest default branch; there is no duplicated skill source.
 
 For every user-started task while the skill is active, its first task-status
 sentence prints one compact assignment line with the exact model and reasoning
@@ -138,41 +157,21 @@ management labels, inheritance labels, or unavailable placeholders.
 
 ## Token usage summary
 
-Every task using this skill ends its final answer with a statistics line, including
-orchestrator-only tasks and incomplete or paused work. The skill uses an
-authoritative inclusive task total or complete exclusive per-run accounting;
-it never estimates missing counters or adds child usage twice. Accounting is
-scoped to the current task and preserved across continuation and compaction.
+The orchestrator collects native usage after subagents finish. Subagents return
+their work results without a telemetry form. On local Codex the bundled
+`collect_token_usage.py` sums task-scoped response records for the orchestrator
+and descendants, deduplicates repeated records, and checks coverage against the
+spawn ledger. No active Goal is required.
 
-The line reports total tokens, elapsed wall-clock time rounded to minutes, and
-unique successful child creations (including descendants). Failed spawn
-attempts do not increase the count; resuming the same child does not count twice.
+The final line includes total tokens, elapsed time and newly created subagents:
 
 `Token usage: total <tokens>; Elapsed time: <formatted duration>; Subagents created: <count>.`
 
-Each delegated or resumed assignment requests a child completion record with
-agent/run identity, native token count, source, scope, checkpoint, and descendant
-records. Missing native counters are explicitly unavailable; children still
-return their results. The parent prefers native settled records and deduplicates
-cumulative reports. Pre-final checkpoint usage is labelled as such.
-
-If combined usage is incomplete but exclusive current-task orchestrator usage is
-known, the summary falls back to:
-
-`Token usage: orchestrator-only 12500 (subagent usage incomplete); Elapsed time: about 8 minutes; Subagents created: 2.`
-
-Durations below one hour omit the hours component, for example `about 8 minutes`.
-Longer durations include hours and remaining minutes, for example `about 1 hour
-8 minutes`. Singular units are used for 1.
-
-Missing metrics never suppress the line. Replace only the unavailable value
-with a reason, retaining all other known metrics, for example:
-
-`Token usage: total unavailable (host does not expose complete task usage); Elapsed time: about 8 minutes; Subagents created: 2.`
-
-The summary is the final content of the final answer, not merely a progress
-message or host UI counter. Pending model selection still keeps the turn open;
-the summary requirement does not authorize ending a pending selection early.
+Totals are through the last observed checkpoint; the current final reply and
+unflushed usage are not included. Cached/reasoning tokens are not added twice.
+Missing logs or incomplete coverage produce an explicit unavailable reason,
+never a fabricated count or a partial total labelled complete. Local log formats
+can change; other hosts require equivalent native usage support.
 
 ## Repository layout
 

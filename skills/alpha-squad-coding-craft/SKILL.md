@@ -39,9 +39,26 @@ is needed.
 
 ## Model and reasoning selection
 
+The standalone flow below requires no Laya installation. If the user requests
+Laya routing, first check that `laya-model-advisor` and compatible
+`laya_tell_me` / `laya_advisor_preferences` tools are available. Only then read
+[references/laya-routing.md](references/laya-routing.md). That optional flow
+replaces the standalone selection gate; never run both gates. Missing skills,
+tools, or inference failures fall back to this standalone flow with a clear
+notice, without installing dependencies or inventing an assessment.
+
 Treat the host's advertised capabilities as authoritative. Never guess a model
 identifier, assume a provider-specific default, or select a model that the
 current host does not expose.
+
+On Codex, resolve the current pair from this conversation's latest `turn_context`
+metadata (match `CODEX_THREAD_ID`), then live host data if needed; never substitute
+global defaults or ask for manual entry before checking metadata. Read only the
+necessary fields. Filter offered efforts using the local Codex config's
+`[desktop].enabled-reasoning-efforts` intersected with each model's support.
+If absent, hide max, ultra and xmax; show those only when explicitly enabled and
+supported. Malformed config requires clarification, not bypass. Revalidate after
+submission. Do not change configuration to enable hidden efforts.
 
 1. The orchestrator uses the current session model and reasoning setting.
 2. The reviewer inherits those exact settings through the host's native
@@ -54,28 +71,31 @@ current host does not expose.
    and reasoning combinations the host can apply to delegated calls. Complete
    the required interaction below even when the current task remains
    orchestrator-only.
-5. Open one native structured selection window containing two required fields,
-   in this order. Do not collapse, skip, or replace either field:
+5. Open ONE native structured window containing all selection fields and a final
+   confirmation step, in this order. Do not open a second confirmation window:
    - **Step 1 — orchestrator, reviewer:** show the exact current-session model
      and reasoning pair and require the user to confirm it. These roles cannot
      select a different pair inside this flow. If the user wants another pair,
      wait for them to change the session settings, re-resolve the exact pair,
      and restart Step 1.
-   - **Step 2 — explorer, worker, tester, researcher:** require the user to
-     select one model-and-reasoning pair from combinations the host currently
-     supports for delegated calls. Treat each pair as one atomic option so the
-     model and reasoning setting cannot become inconsistent.
-6. After both fields have answers, open a second native structured window named
-   **Final confirmation**. Show the exact assignment summary and require one of
-   these choices: **Confirm and continue** or **Revise selections**. Continue
-   only after **Confirm and continue**. On **Revise selections**, reopen the
-   two-field window at Step 1.
-7. Treat the full two-window interaction as a blocking gate. Do not start
-   substantive work or create any subagent until Step 1, Step 2, and Final
-   confirmation are complete. Never infer confirmation from silence, a timeout,
+   - **Step 2 — Model (explorer, worker, tester, researcher):** list each verified
+     model once, not a long Cartesian product of model/effort combinations.
+   - **Step 3 — Reasoning:** list locally allowed, host-supported efforts.
+     Explain model-specific restrictions and validate the chosen pair on submit.
+   - **Final confirmation:** offer **Confirm and continue**, **Revise selections**,
+     and **Cancel**. Explain that confirmation covers all preceding selections.
+     A static window cannot show a summary of answers not yet submitted; do not
+     fabricate one. Keep this as the LAST step in the SAME request.
+6. Validate all answers together after submission. Continue only when every pair
+   is valid and the final answer is **Confirm and continue**. For invalid input
+   or **Revise selections**, reopen the same window with valid answers retained
+   and the problem explained. **Cancel** makes no assignment changes.
+7. Treat the complete single-window interaction as a blocking gate. Do not start
+   substantive work or create any subagent until all fields and Final
+   confirmation are submitted. Never infer confirmation from silence, a timeout,
    a previous session, or an unrelated approval.
 8. When a native structured user-input tool is available, it is mandatory for
-   both windows. Do not use ordinary chat, commentary, a filesystem approval,
+   the complete window. Do not use ordinary chat, commentary, a filesystem approval,
    or a command approval for either selection or Final confirmation. If no
    structured user-input tool is available, report that the required interaction
    cannot be presented and wait without starting substantive work or delegation.
@@ -88,7 +108,7 @@ current host does not expose.
    Goal-status policy only if an independent blocking condition remains after
    the required interaction is complete.
 10. A model and reasoning pair explicitly selected earlier in the same session
-    satisfies Step 2 only after host validation and Final confirmation in this
+    satisfies the selection only after host validation and Final confirmation in this
     session. If a stored combination is unavailable or no longer supported,
     reopen selection instead of substituting another value.
 11. Pass the selected model and reasoning setting explicitly on every
@@ -122,13 +142,13 @@ may not start.
 
 Do not use a filesystem or command approval dialog for model selection. Model
 choice uses the host's native structured preference-selection UI. The client
-may control the outer submit button's localized label; the final window must
+may control the outer submit button's localized label; the final step must
 still contain an explicit **Confirm and continue** choice and must not continue
 until the user selects it and submits the window.
 
 ## Structured input lifecycle
 
-Before opening either window, inspect the input tool's current availability
+Before opening the window, inspect the input tool's current availability
 and response semantics. A blocking tool waits for submitted answers; an async
 tool only acknowledges that the request was created. Do not call a tool that
 is restricted to a different collaboration mode.
@@ -141,11 +161,11 @@ or Final confirmation request is pending: ending the turn can remove the
 interaction before the user submits it. Do not replace this wait with repeated
 final status messages or duplicate requests on Goal continuations.
 
-Track the current stage (selection pending, confirmation pending, confirmed),
+Track the current stage (selection pending, confirmed),
 the exact submitted assignments, and the request identifier when the host
 provides one. Preserve them across continuation or compaction. Only an actual
-user submission advances the stage. Submit Final confirmation once both fields
-have valid answers; start work only after its explicit Confirm and continue
+user submission advances the stage. Start work only after all fields validate
+and the final step explicitly contains Confirm and continue in that same
 submission. Preselected options, unrelated messages, elapsed time, and Goal
 wakeups are not submissions. If the user changes the task or asks to repair
 this selection workflow, handle that request rather than trapping the user in
@@ -227,68 +247,42 @@ not only when its result arrives. A created child that later fails still counts.
 Do not count failed spawn attempts as created subagents, but include their token
 usage when native accounting attributes consumed tokens to this task.
 
-### Subagent completion reports
+### Parent-owned token collection
 
-Include the following reporting contract in every delegated task and resumed
-assignment, even if installed role templates do not contain it. Propagate it
-when a child delegates further. A child returns its work result first, followed
-by an accounting record for the parent:
+The orchestrator collects native usage AFTER children complete. Subagents return
+their work result; do not require an agent_id/run_id/usage_scope/token telemetry
+report from them. Keep the spawn ledger internally, including descendants and
+resumed calls. A missing child self-report is not missing host accounting.
 
-```text
-agent_id: <native stable child ID, or unavailable with reason>
-run_id: <native run/attempt ID, or unavailable with reason>
-usage_scope: <this run or this child cumulative; task boundary; includes descendants or not>
-total_tokens: <native integer, or unavailable with reason>
-usage_source: <native tool/event/log and counter field, or unavailable with reason>
-usage_checkpoint: <timestamp/event ID; settled or before final reply>
-descendants_created: <unique successful child IDs and their accounting records, or unavailable with reason>
-```
-
-The child must read an available authoritative counter before replying. It must
-not guess from output length or claim its own final reply is included unless
-the host confirms that. If no counter is accessible, return unavailable with the
-reason and still deliver the work result. Use an empty descendant list only when
-no descendants were created; unavailable IDs must never be invented.
-
-The parent reconciles reports with native post-completion accounting when
-available; settled host records supersede earlier child checkpoints for the same
-run. A self-reported number without a verifiable source, scope, and stable
-identity is not sufficient for aggregation. Missing reports do not block delivery
-or justify repeated child runs just to obtain counters. Track cumulative versus
-per-run records and descendant inclusion so resumed agents and nested children
-are never double-counted.
+On local Codex, read [references/token-accounting.md](references/token-accounting.md)
+and use the bundled read-only collector. Resolve and retain this task's exact
+root thread and root turn IDs at entry from native session metadata. On verified
+automatic continuation, add its root turn ID only if it belongs to the SAME
+task; never include later unrelated user requests. The collector sums per-response
+native total_tokens across the root and related descendants, deduplicating
+responses rather than summing cumulative snapshots.
 
 ### Resolve metrics before finalizing
 
-Query available authoritative task/goal or per-run usage immediately before the
-final answer. Do not substitute account quota percentages, context-window size,
-text length, or an unrelated task's usage for consumed tokens.
+Run the collector immediately before the final answer, after waiting for
+participating children to finish. Supply the known unique participating subagent
+count, including descendants. Use a numeric combined total only when collection
+succeeds and scope/coverage match the task. No active Goal is required. Missing
+get_goal usage or a missing direct token tool is NOT grounds to skip local logs.
 
-- Prefer an authoritative inclusive task/goal total when its documented scope
-  covers this task's orchestrator and all child runs. This total is usable even
-  when separate child subtotals are not exposed. Never add child usage to it.
-- Otherwise sum exclusive per-run totals only after all participating runs are
-  accounted for. Deduplicate repeated cumulative snapshots by stable run ID;
-  use the latest authoritative cumulative snapshot, not the sum of snapshots.
-  Count resumed/retried runs once each. Conflicting records at the same checkpoint
-  or ambiguous inclusion semantics make the token total unavailable.
-- Use input plus output only when the host documents them as non-overlapping.
-  Do not add cached or reasoning tokens already included in those counters.
-  A cumulative session counter may be differenced against the task baseline only
-  if its scope and continuity are verified. Never label session lifetime usage
-  as current-task usage.
-- If the combined total is unavailable but current-task orchestrator usage is
-  authoritative and exclusive of children, fall back to
-  `Token usage: orchestrator-only <tokens> (subagent usage incomplete)`.
-  State the actual exclusion reason if different. Never label this as `total`,
-  add only some children to it, or substitute a session lifetime count.
-- If neither combined nor exclusive orchestrator usage can be established,
-  report `Token usage: total unavailable (<specific reason>)`. Missing token
-  metrics never suppress elapsed time or the subagent count.
-- Report the last observable native usage checkpoint; do not estimate tokens for
-  a final reply that has not yet been generated. If a reported numeric aggregate
-  uses pre-final child checkpoints, mark it `(last observed checkpoints; child
-  final replies not included)` rather than claiming settled completion usage.
+- Use native total_tokens directly. Cached input and reasoning output are already
+  components of usage; never add them again. Tokens are not monetary cost.
+- Never use lifetime thread totals for a later task or sum cumulative snapshots.
+- If an authoritative inclusive task total is used instead, do not add children
+  to that inclusive number.
+- Report the last observed checkpoint, not an estimate of the current final
+  reply. Completed child replies can be included once their records are flushed.
+- For missing logs, invalid counters, conflicting duplicates or incomplete
+  subagent coverage, report `Token usage: total unavailable (<specific reason>)`.
+  Never present a partial sum as the complete total. An explicitly verified
+  root-only figure may be labelled `orchestrator-only`, not total.
+- On non-Codex hosts use verified native task usage with equivalent scope and
+  deduplication; do not run the Codex parser against another host's logs.
 
 Measure elapsed wall-clock time from recorded task entry to the final accounting
 checkpoint, including selection, tools, and waits, rounded to the nearest whole
