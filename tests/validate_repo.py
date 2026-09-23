@@ -141,11 +141,11 @@ def validate_skill() -> None:
     assert metadata["name"] == PLUGIN_NAME
     non_empty_string(metadata.get("description"), "Skill description")
     assert body.strip()
-    assert "## Completion token usage" in body
-    assert "Omit the entire completion-statistics line" in body
-    assert "`unavailable` placeholders" in body
+    assert "## Completion summary (mandatory)" in body
+    assert "Never omit the entire completion-statistics line" in body
+    assert "`unavailable (<specific reason>)`" in body
     assert "Token usage: total <tokens>" in body
-    assert "Elapsed time: about <hours> hours <minutes> minutes" in body
+    assert "Elapsed time: <formatted duration>" in body
     assert "Subagents created: <count>." in body
     assert "Subagents created: 0" in body
     assert "Token usage：" not in body

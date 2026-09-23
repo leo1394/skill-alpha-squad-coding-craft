@@ -12,8 +12,8 @@ roles without embedding provider-specific model identifiers.
 - Safe first-use Codex bootstrap that preserves existing user files.
 - Blocking runtime selection of both model and reasoning controls exposed by
   the host before specialized agents start.
-- Final token accounting across the orchestrator and all spawned agents when
-  the host exposes complete usage metrics.
+- Mandatory final token, elapsed-time, and subagent summary; unavailable metrics
+  retain an explicit reason instead of suppressing the summary.
 - Portable and Codex/Claude compatibility manifests for marketplace packaging.
 
 ## Install
@@ -138,18 +138,41 @@ management labels, inheritance labels, or unavailable placeholders.
 
 ## Token usage summary
 
-At completion, the skill requests the host's native usage counters, aggregates
-every actual attempt once by stable run ID, and prints separate orchestrator and
-subagent totals internally. The reported total includes both and covers every
-child role, retry, and resumed run. The skill never estimates missing counters;
-if any run is missing, it omits the completion-statistics line entirely.
+Every task using this skill ends its final answer with a statistics line, including
+orchestrator-only tasks and incomplete or paused work. The skill uses an
+authoritative inclusive task total or complete exclusive per-run accounting;
+it never estimates missing counters or adds child usage twice. Accounting is
+scoped to the current task and preserved across continuation and compaction.
 
-The final one-line English summary reports total tokens, approximate wall-clock
-time rounded to minutes, and the number of successfully created subagents. It
-counts unique child IDs, excludes failed spawn attempts, and does not count a
-resumed child twice:
+The line reports total tokens, elapsed wall-clock time rounded to minutes, and
+unique successful child creations (including descendants). Failed spawn
+attempts do not increase the count; resuming the same child does not count twice.
 
-`Token usage: total <tokens>; Elapsed time: about <hours> hours <minutes> minutes; Subagents created: <count>.`
+`Token usage: total <tokens>; Elapsed time: <formatted duration>; Subagents created: <count>.`
+
+Each delegated or resumed assignment requests a child completion record with
+agent/run identity, native token count, source, scope, checkpoint, and descendant
+records. Missing native counters are explicitly unavailable; children still
+return their results. The parent prefers native settled records and deduplicates
+cumulative reports. Pre-final checkpoint usage is labelled as such.
+
+If combined usage is incomplete but exclusive current-task orchestrator usage is
+known, the summary falls back to:
+
+`Token usage: orchestrator-only 12500 (subagent usage incomplete); Elapsed time: about 8 minutes; Subagents created: 2.`
+
+Durations below one hour omit the hours component, for example `about 8 minutes`.
+Longer durations include hours and remaining minutes, for example `about 1 hour
+8 minutes`. Singular units are used for 1.
+
+Missing metrics never suppress the line. Replace only the unavailable value
+with a reason, retaining all other known metrics, for example:
+
+`Token usage: total unavailable (host does not expose complete task usage); Elapsed time: about 8 minutes; Subagents created: 2.`
+
+The summary is the final content of the final answer, not merely a progress
+message or host UI counter. Pending model selection still keeps the turn open;
+the summary requirement does not authorize ending a pending selection early.
 
 ## Repository layout
 

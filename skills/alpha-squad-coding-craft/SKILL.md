@@ -196,57 +196,145 @@ subsystem unless the orchestrator explicitly coordinates shared ownership.
 5. Request an independent review for material or high-risk changes.
 6. Resolve findings, inspect the final diff, and run focused checks.
 7. Report what changed, validation performed, limitations, and unresolved
-   decisions.
+   decisions. Finish with the mandatory completion summary below, even when
+   native token accounting is unavailable.
 
 Run independent tasks in parallel and dependent tasks in order. Do not spawn
 every role mechanically. Do not claim an agent contributed unless the host
 actually started that role and returned a result.
 
-## Completion token usage
+## Completion summary (mandatory)
 
-Before finishing a task that used this skill, query the host's native usage
-accounting for the orchestrator and every spawned agent run. Prefer the same
-authoritative task or goal usage source the host uses for its built-in final
-usage summary. Record the task start and completion timestamps and compute the
-elapsed wall-clock time, rounded to the nearest whole minute.
+Every task that used this skill MUST end its final user-facing answer with the
+completion-statistics line below. This is a completion gate, not optional
+commentary. Include it for orchestrator-only tasks and when reporting incomplete,
+failed, cancelled, or paused work. Missing usage data never permits omitting the
+line. Do not send a final answer merely to provide statistics while a structured
+selection or confirmation request is pending; its lifecycle rules still apply.
 
-Track every actual orchestrator and subagent run or attempt with its stable run
-ID. Also track every successfully created subagent by its stable agent or child
-thread ID. Retries and resumed runs consume tokens and must each be counted
-once. Only deduplicate repeated usage records for the same stable run ID;
-conflicting records make the total unavailable.
+### Capture accounting state
 
-Sum exclusive per-run `total_tokens` records after confirming that every
-tracked orchestrator and subagent run is present. Compute the subagent subtotal
-from all child runs, including retries and resumed runs, then compute the
-overall total as orchestrator plus subagents. An authoritative inclusive task
-or goal total may verify that result, but never add it to per-run totals. If a
-run has no total, sum input and output tokens only when the host documents those
-counters as non-overlapping. Never estimate from text length or context-window
-size.
+At task entry, before model selection or substantive work, record the task start
+timestamp and available native usage baseline. Preserve these across automatic
+continuations and compaction; do not restart the clock or lose agent records.
+For a later user-started task, open a new accounting scope rather than reporting
+the whole conversation's lifetime usage.
 
-Only print the completion statistics when authoritative orchestrator, subagent,
-and overall totals can all be established. The subagent subtotal must include
-every child role and every child run, and `total` must equal orchestrator plus
-subagents.
+Track the task or goal ID, every participating run ID, and every successfully
+created child agent/thread ID, with role, status, and usage source. Include all
+roles, retries, and resumed runs. Record child creation immediately on success,
+not only when its result arrives. A created child that later fails still counts.
+Do not count failed spawn attempts as created subagents, but include their token
+usage when native accounting attributes consumed tokens to this task.
 
-Use exactly one English line in this format:
+### Subagent completion reports
 
-`Token usage: total <tokens>; Elapsed time: about <hours> hours <minutes> minutes; Subagents created: <count>.`
+Include the following reporting contract in every delegated task and resumed
+assignment, even if installed role templates do not contain it. Propagate it
+when a child delegates further. A child returns its work result first, followed
+by an accounting record for the parent:
 
-Do not print separate token subtotals, a separate subagent-count line, full-width
-punctuation, or non-English labels in this completion statistic.
+```text
+agent_id: <native stable child ID, or unavailable with reason>
+run_id: <native run/attempt ID, or unavailable with reason>
+usage_scope: <this run or this child cumulative; task boundary; includes descendants or not>
+total_tokens: <native integer, or unavailable with reason>
+usage_source: <native tool/event/log and counter field, or unavailable with reason>
+usage_checkpoint: <timestamp/event ID; settled or before final reply>
+descendants_created: <unique successful child IDs and their accounting records, or unavailable with reason>
+```
+
+The child must read an available authoritative counter before replying. It must
+not guess from output length or claim its own final reply is included unless
+the host confirms that. If no counter is accessible, return unavailable with the
+reason and still deliver the work result. Use an empty descendant list only when
+no descendants were created; unavailable IDs must never be invented.
+
+The parent reconciles reports with native post-completion accounting when
+available; settled host records supersede earlier child checkpoints for the same
+run. A self-reported number without a verifiable source, scope, and stable
+identity is not sufficient for aggregation. Missing reports do not block delivery
+or justify repeated child runs just to obtain counters. Track cumulative versus
+per-run records and descendant inclusion so resumed agents and nested children
+are never double-counted.
+
+### Resolve metrics before finalizing
+
+Query available authoritative task/goal or per-run usage immediately before the
+final answer. Do not substitute account quota percentages, context-window size,
+text length, or an unrelated task's usage for consumed tokens.
+
+- Prefer an authoritative inclusive task/goal total when its documented scope
+  covers this task's orchestrator and all child runs. This total is usable even
+  when separate child subtotals are not exposed. Never add child usage to it.
+- Otherwise sum exclusive per-run totals only after all participating runs are
+  accounted for. Deduplicate repeated cumulative snapshots by stable run ID;
+  use the latest authoritative cumulative snapshot, not the sum of snapshots.
+  Count resumed/retried runs once each. Conflicting records at the same checkpoint
+  or ambiguous inclusion semantics make the token total unavailable.
+- Use input plus output only when the host documents them as non-overlapping.
+  Do not add cached or reasoning tokens already included in those counters.
+  A cumulative session counter may be differenced against the task baseline only
+  if its scope and continuity are verified. Never label session lifetime usage
+  as current-task usage.
+- If the combined total is unavailable but current-task orchestrator usage is
+  authoritative and exclusive of children, fall back to
+  `Token usage: orchestrator-only <tokens> (subagent usage incomplete)`.
+  State the actual exclusion reason if different. Never label this as `total`,
+  add only some children to it, or substitute a session lifetime count.
+- If neither combined nor exclusive orchestrator usage can be established,
+  report `Token usage: total unavailable (<specific reason>)`. Missing token
+  metrics never suppress elapsed time or the subagent count.
+- Report the last observable native usage checkpoint; do not estimate tokens for
+  a final reply that has not yet been generated. If a reported numeric aggregate
+  uses pre-final child checkpoints, mark it `(last observed checkpoints; child
+  final replies not included)` rather than claiming settled completion usage.
+
+Measure elapsed wall-clock time from recorded task entry to the final accounting
+checkpoint, including selection, tools, and waits, rounded to the nearest whole
+minute. Do not sum parallel agents' durations. If the start timestamp is lost,
+recover it from authoritative task events or report unavailable with a reason.
+If the rounded duration is below 60 minutes, use `about <minutes> minutes` and
+omit the hours component entirely. At 60 minutes or more, include hours and
+remaining minutes. Use singular units for 1: `about 1 minute`,
+`about 1 hour 0 minutes`, `about 1 hour 1 minute`. A measured duration rounding to
+zero is `about 0 minutes`; never use zero as a substitute for a missing timestamp.
 
 Count unique successful subagent creations by stable agent or child thread ID.
-Do not count failed spawn attempts. Resuming the same subagent does not increase
-the count; spawning a new subagent for a retry does. Include every role:
-`explorer`, `worker`, `tester`, `researcher`, and `reviewer`.
+Do not count failed spawn attempts. Resuming the same child does not increase the
+count; spawning a new child for a retry does. Include explorer, worker, tester,
+researcher, reviewer, and descendant agents. Do not count configured roles that
+were never spawned or the orchestrator itself. Use `Subagents created: 0` for a
+verified orchestrator-only task. If the creation ledger is incomplete, report
+unavailable with a reason instead of guessing zero.
 
-If any participating run is missing or inclusion semantics are ambiguous, do
-not invent token totals. Omit the entire completion-statistics line and never
-print `unavailable` placeholders or a partial line. For an orchestrator-only
-task with complete usage data, use `Subagents created: 0` within the standard
-line.
+### Required final line
+
+Append exactly one English statistics line as the last content of the final
+answer, after the outcome, validation, limitations, and any requested follow-up.
+A progress update, tool result, hidden log, or built-in UI usage display is not
+a substitute. Keep all three labels and use ASCII punctuation:
+
+`Token usage: total <tokens>; Elapsed time: <formatted duration>; Subagents created: <count>.`
+
+For example, a duration under one hour is `Elapsed time: about 8 minutes`;
+a longer duration is `Elapsed time: about 2 hours 8 minutes`.
+When only exclusive orchestrator accounting is available, use:
+
+`Token usage: orchestrator-only 12500 (subagent usage incomplete); Elapsed time: about 8 minutes; Subagents created: 2.`
+
+When a metric cannot be established, replace only that metric's value with
+`unavailable (<specific reason>)`. For example:
+
+`Token usage: total unavailable (host does not expose complete task usage); Elapsed time: about 8 minutes; Subagents created: 2.`
+
+Before sending final, check that all three metrics are present, numeric values
+have evidence and the correct task scope, unavailable values have reasons, and
+the statistics line is the final content. If any check fails, fix the summary
+before sending. Never omit the entire completion-statistics line.
+
+Read [references/adapters.md](references/adapters.md#token-accounting) for
+host accounting boundaries and completion verification scenarios.
 
 ## Portability
 

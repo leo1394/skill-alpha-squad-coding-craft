@@ -114,20 +114,60 @@ it was actually observed; do not claim a client-side UI fix from skill edits.
 
 ## Token accounting
 
-Use the host's native per-run or task usage records. Aggregate all orchestrator
-and spawned-agent attempts exactly once by stable run ID, including retries and
-resumed runs. Deduplicate only repeated records for the same run. A host may
-expose input, output, cached, reasoning, or total counters with different
-semantics. Sum all exclusive child records into a `subagents` subtotal and add
-that subtotal to the orchestrator total. Use a documented inclusive task total
-only to verify the result, never as another summand. If inclusion semantics or
-complete subagent usage are unavailable, omit the token-usage line instead of
-estimating.
+Follow the mandatory completion summary in `SKILL.md`. Metrics availability
+changes the values, never whether the final statistics line is emitted.
 
-Count unique successful child creations by stable agent or child thread ID.
-Failed spawn attempts do not count; resuming an existing child does not add one;
-a newly spawned retry does. Measure elapsed wall-clock time from task start to
-completion and round it to the nearest whole minute. Emit one English summary:
-`Token usage: total <tokens>; Elapsed time: about <hours> hours <minutes>
-minutes; Subagents created: <count>.` Omit the entire line when complete token
-usage cannot be established.
+On Codex, use native task/goal usage when exposed and its scope is explicit.
+An inclusive task total can be used without separate per-child counters if it
+covers all participants. A goal total must not be relabelled as a later task's
+usage. Quota tools such as account usage-limit displays report account budgets,
+not tokens consumed by this task. Do not use them for this summary. Do not invent
+a usage API, assume every host exposes per-agent metrics, or assume session
+counters include child agents. Request the completion record specified in
+`SKILL.md` in each delegated/resumed prompt, and reconcile it with native settled
+records when available. Child self-reports cannot create missing host telemetry.
+If the total is incomplete but exclusive current-task orchestrator usage is
+known, print `Token usage: orchestrator-only <tokens> (subagent usage incomplete)`.
+If neither source is available, print `Token usage: total unavailable (host does not expose complete task usage)`
+and retain elapsed time and subagent count on the same final line.
+
+Record start time and child creation IDs during execution. Preserve the ledger
+through compaction and continuation. Reconcile descendant creations and usage
+through native run records or delegated results; missing descendants invalidate
+only the affected metrics. Read only the task-scoped records needed for these
+metrics; do not dump unrelated conversations or credentials. Report unavailable
+if the required records cannot be accessed.
+
+### Completion verification scenarios
+
+Check final-answer behavior against these cases; repository text validation and
+installer tests alone do not prove an agent actually follows the completion gate.
+
+- Orchestrator-only, complete accounting: final line has the verified total,
+  wall-clock duration, and `Subagents created: 0`.
+- No token API, known start time and two children: final line has token usage
+  unavailable with a reason, measured elapsed time, and child count 2.
+- Inclusive native task total but no child subtotals: use that total once when
+  its scope is documented to include all participants; retain the known count.
+- A successful child is resumed, another child spawn fails, and a new child is
+  created for retry: count two unique successful creations, include all tracked
+  token-consuming attempts, and never double-count cumulative snapshots.
+- One child usage record is missing and no inclusive total exists: use
+  orchestrator-only usage if verified; otherwise mark tokens unavailable. Known
+  elapsed time and creation count still appear.
+- A child reports a pre-final cumulative counter and the host later supplies a
+  settled counter: use the settled value once, not the sum. Without settlement,
+  identify pre-final checkpoint usage explicitly; never estimate missing tokens.
+- A child lacks native counters: it still returns its result and an unavailable
+  accounting record with a reason, without retrying the work for telemetry.
+- Rounded elapsed durations of 8, 60, 61, and 128 minutes render as `about 8
+  minutes`, `about 1 hour 0 minutes`, `about 1 hour 1 minute`, and `about 2 hours
+  8 minutes`. No zero-hour component is emitted.
+- Compaction loses the start timestamp: recover it from task events or mark
+  elapsed time unavailable; never substitute zero or omit the line.
+- A paused, cancelled, or incomplete task produces a final answer after work:
+  append the same three metrics through the latest observable checkpoint.
+- Model selection remains pending: keep waiting without emitting a premature
+  final answer merely to satisfy the summary requirement.
+- A new task in a long-running conversation: report the new task's accounting
+  scope, not lifetime conversation tokens or agents from previous tasks.
