@@ -68,6 +68,16 @@ Call `laya_tell_me` with a short factual state and:
 
 Use roles explorer, worker, tester, researcher or reviewer. Never route the
 orchestrator. Catalog and settings stay out of the model's inference state.
+When the installed tool advertises retrieval-scope fields, pass
+`advisor.task_family` for this subtask's factual category (`documentation`,
+`migration`, or another canonical slug; unknown stays `general`). Pass
+`advisor.task_lineage` from the known stable source task, retaining it across
+retries, reviews and related child attempts even when their categories differ.
+Follow the advisor skill's bounds. Do not use a fresh decision/attempt ID as
+proof of an independent task. Omit unknown lineage; cases without it cannot
+establish held-out evaluation coverage. These fields only filter historical
+context and never grant recording consent, change labels or activate a version.
+Older tools without these advertised fields retain the existing routing flow.
 For non-auto execution roles also pass `advisor.execution_choice` containing the
 confirmed session-only `{model, reasoning_effort}` from setup. Preserve this pair
 until explicitly revised; it is not the orchestrator pair or a persisted ceiling.

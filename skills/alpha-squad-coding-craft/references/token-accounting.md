@@ -50,6 +50,22 @@ The number is through the last observable checkpoint, not a billing statement.
 Child final replies are included when logged; the root's not-yet-generated final
 reply and in-flight/unflushed usage cannot be included. State this limitation.
 
+Successful reports also contain exclusive native-turn `segments`, deduplicated
+response counts and deterministic segment checkpoints. These are not inclusive
+task/subtree counters and must not be added to `total_tokens` again. For optional
+Laya persistence, follow [laya-feedback.md](laya-feedback.md#codex-usage-delivery):
+only exact, confirmed execution bindings can become attempt usage events. The
+collector does not submit feedback or grant recording consent.
+
+Segments may also expose `native_components`: validated input/output sums,
+minimum/maximum per-response input counts and a separate component checkpoint.
+These are optional metadata, not extra tokens to add to `total_tokens`. Missing,
+conflicting or inconsistent components make only that breakdown unavailable;
+valid legacy total accounting remains usable. Cached input and reasoning output
+are already subsets. Minimum/maximum input are not initial/final context: context
+compaction can change their order. A scenario producer must state any conversion
+from these counters to hypothetical context retention or work passes as assumptions.
+
 ## Other hosts
 
 Use the host's authoritative task or response usage with equivalent task scoping

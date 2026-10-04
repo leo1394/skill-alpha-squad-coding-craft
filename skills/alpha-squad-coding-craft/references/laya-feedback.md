@@ -27,7 +27,8 @@ observed the event. Agent-reported `user_choice` is still an agent report and is
 not a human-confirmed label.
 
 The allowed kinds are `assignment`, `test`, `review`, `outcome`, `user_choice`,
-and `usage`. Check the live tool schema for kind-specific fields and limits. The
+and `usage`; newer hosts also accept optional `run_manifest` scenario evidence.
+Check the live tool schema for kind-specific fields and limits. The
 shared envelope and scoring contract below are the minimum portable contract.
 
 ## Assignment facts
@@ -113,6 +114,130 @@ For `usage`, report a known token count only with verified native `source`,
 Never sum potentially overlapping parent and child scopes. A missing revision
 dependency is retryable; retransmit the unchanged event after its predecessor.
 
+### Codex usage delivery
+
+When routing has a recorded decision and recording consent remains enabled, the
+parent prepares usage after the relevant child finishes. Use the scoped native
+collector from [token-accounting.md](token-accounting.md); do not ask the child
+to estimate tokens or copy the inclusive task total into each child's attempt.
+This is an explicit task-scoped metadata read, not background session harvesting.
+
+Retain an exact binding from the dispatch ledger: native `thread_id`, `turn_id`
+and `root_turn_id` to the existing Laya `decision_id` and `attempt_ref`. Set
+`configuration_scope_confirmed: true` only after verifying that the whole native
+turn belongs to that one execution segment and was not split across attempts or
+models. A resumed child turn needs its own recorded execution segment. Leave
+orchestration spanning several decisions, mixed configurations and unresolved
+identities unbound; do not invent an assignment merely to improve coverage.
+
+Pass the unedited successful collector report and these bindings to:
+
+```bash
+python3 scripts/prepare_laya_usage.py --report usage.json --bindings bindings.json
+```
+
+The helper prints prepared tool arguments only; it never sends feedback, enables
+recording or writes to the database. It checks scope consistency, not authenticity
+of an arbitrary JSON file. Unknown or inconsistent accounting produces no events.
+Check the live `laya_feedback` schema supports `aggregation`, `usage_stream_id`
+and `source_sequence` before submission. An older tool must be reported as
+incompatible; do not strip ordering metadata to force acceptance.
+
+Call native `laya_feedback` once per prepared event and keep the exact event and
+receipt. Retry unchanged events with the same ID under the delivery rules above.
+The stable stream identity is independent of the decision; its source sequence
+is the deduplicated native response count. New checkpoints produce new events,
+while repeated preparation of the same evidence remains idempotent. The parent
+is the reporting actor (`orchestrator`); this does not impersonate a child's
+judgment or create any score. Unbound segments are excluded and coverage remains
+partial, even when the separate completion summary has a valid inclusive total.
+Other hosts retain their native usage path; do not run the Codex collector on
+Claude, DSH or Pi logs.
+
+### Automatic scenario inputs (Codex, capability-checked)
+
+When recording is already authorized and the live schema supports `run_manifest`
+with `scenario`, the parent maintains a small task-scoped plan alongside the
+dispatch ledger. Do this as part of normal work, without asking the user to fill
+in counters, technical identifiers or a second baseline run. Missing support or
+inputs leaves the estimate unavailable; it never blocks the task.
+
+Capture only visible, redacted task material already in scope: shared initial
+context, each logical stage's new relevant context and useful work output. Do not
+read full unrelated sessions, hidden reasoning, credentials or source trees to
+inflate coverage. Do not include the whole shared context again in each stage.
+Context/output text is local producer input, not transmitted feedback. Keep local
+input artifacts private and subject to the task's retention/privacy requirements.
+
+Do not use a short task/result summary as a substitute for the full input scope
+when the actual native total includes system instructions, tool definitions and
+repeated context. A `partial` label does not repair this mismatch. Until compatible
+native input/output coverage is available, retain usage and first scores but do
+not submit that text-proxy manifest as estimated savings. This does not require
+a second execution, a measured baseline, or access to hidden reasoning text.
+
+After execution, bind each stage to its verified native segment using the same
+`thread_id`, `turn_id`, `root_turn_id` as usage delivery. Include testing, review,
+research and retries when they belong to the scope. Preserve plan order; do not
+sort by model tier or select only stages that appear to save tokens. `passes` is
+the parent's declared estimate of necessary unsplit work passes (1–100), not the
+native response count. Record it from the logical work plan without fitting it
+to a desired savings result. Unknown inputs are not zero. The hypothetical model
+and effort come from the current task's verified orchestrator metadata, not a
+global default or the child's assignment.
+
+Prefer `input_mode: "native-envelope-v1"` when the collector exposes validated
+`native_components` for every bound segment. The parent creates this plan; users
+do not author it:
+
+```json
+{"input_mode":"native-envelope-v1","run_id":"stable-task-run-id","observed_at":"2026-10-04T00:00:00Z","orchestrator":{"model":"host-observed-model","reasoning_effort":"medium","source":"host","reference":"native-turn-context-ref"},"meter_identity":"host-accounting-version","stages":[{"thread_id":"child-thread","turn_id":"child-turn","root_turn_id":"task-root-turn","passes":2}]}
+```
+
+This mode requires no task text. It uses the smallest observed input count across
+bound stages as a shared-context proxy, each stage's largest input minus that
+proxy as its context increment, and its summed native output as the output proxy.
+Those mappings are explicit hypothetical assumptions: min/max are not observed
+initial/final context, and compaction or different host prompts can affect them.
+The existing retention/output sensitivity scenarios remain heuristic, not a
+confidence interval or proof of savings. Do not fit passes to a desired result.
+Component digests are retained alongside usage checkpoints. An unavailable
+breakdown must not silently fall back to summary text.
+
+Legacy text-proxy plan shape (compatibility only; not a substitute for native
+input coverage):
+
+```json
+{"run_id":"stable-task-run-id","observed_at":"2026-10-04T00:00:00Z","orchestrator":{"model":"host-observed-model","reasoning_effort":"medium","source":"host","reference":"native-turn-context-ref"},"meter_identity":"host-accounting-version","initial_context_text":"redacted shared task context","stages":[{"thread_id":"child-thread","turn_id":"child-turn","root_turn_id":"task-root-turn","context_text":"new relevant stage context","work_output_text":"useful visible stage output","passes":1}]}
+```
+
+Use only a known accounting identity; do not guess a tokenizer version. With the
+unedited successful collector report and existing bindings, run:
+
+```bash
+python3 scripts/prepare_laya_scenario.py --report usage.json --bindings bindings.json --plan scenario-plan.json
+```
+
+The legacy producer mode estimates text tokens with the explicit `text-proxy-v1` heuristic
+(ASCII characters / 4 rounded up, plus non-ASCII codepoints). This is not a native
+tokenizer count. It emits numeric scenario inputs, usage references and provenance,
+never the input text. Hypothetical passes/output/context remain assumptions; the
+actual side uses native usage. Model tier is not a token-saving multiplier.
+
+Submit the returned usage events through native `laya_feedback`, retain their
+receipts, then submit the manifest after dependencies report `stored`. Do not
+submit the same usage twice through both helpers; their event identities are
+stable if an unchanged retry is needed. Keep the final manifest immutable and
+submit once per completed scope. Later evidence corrections need explicit version
+handling; do not manufacture a new run ID to bypass overlap exclusions.
+
+The producer deliberately reports partial coverage, even when every known segment
+has a binding. A ledger and native totals cannot prove complete whole-task context.
+If parent orchestration cannot be mapped honestly, leave it unbound and label the
+result partial; do not fabricate a child assignment. Sending the plan must not
+enable recording, create human labels, activate memory or trigger extra inference.
+Other hosts need their own accounting adapter before this producer can be used.
+
 Use this compact child handoff shape when feedback was attempted:
 
 ```json
@@ -138,7 +263,7 @@ tool schema.
     "event_id": {"type": "string", "minLength": 1},
     "decision_id": {"type": "string", "minLength": 1},
     "attempt_ref": {"type": "string", "minLength": 1},
-    "kind": {"enum": ["assignment", "test", "review", "outcome", "user_choice", "usage"]},
+    "kind": {"enum": ["assignment", "test", "review", "outcome", "user_choice", "usage", "run_manifest"]},
     "source": {
       "type": "object",
       "additionalProperties": false,
