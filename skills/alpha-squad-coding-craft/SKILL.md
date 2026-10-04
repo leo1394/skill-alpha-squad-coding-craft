@@ -47,6 +47,11 @@ replaces the standalone selection gate; never run both gates. Missing skills,
 tools, or inference failures fall back to this standalone flow with a clear
 notice, without installing dependencies or inventing an assessment.
 
+Laya feedback is also optional and has separate recording consent. When Laya
+routing provides a decision ID and a compatible feedback tool is available,
+read [references/laya-feedback.md](references/laya-feedback.md). Missing or
+failed feedback collection never blocks coding, routing, testing, or review.
+
 Treat the host's advertised capabilities as authoritative. Never guess a model
 identifier, assume a provider-specific default, or select a model that the
 current host does not expose.
@@ -304,10 +309,23 @@ unavailable with a reason instead of guessing zero.
 
 ### Required final line
 
-Append exactly one English statistics line as the last content of the final
-answer, after the outcome, validation, limitations, and any requested follow-up.
-A progress update, tool result, hidden log, or built-in UI usage display is not
-a substitute. Keep all three labels and use ASCII punctuation:
+Append exactly one statistics line as the last content of the final answer,
+after the outcome, validation, limitations, and any requested follow-up.
+Use the language of the current conversation (or the user's explicit output
+language) for labels, duration units, scope qualifiers, and unavailable reasons.
+The language of this skill file or an English example does not override that
+choice. In mixed-language conversations follow the user's latest natural-language
+request. Preserve all three metrics when translating; punctuation may follow the
+chosen language. A progress update, tool result, hidden log, or built-in UI usage
+display is not a substitute.
+
+Display every token count with comma thousands separators, for example
+`21910071` becomes `21,910,071` and `12500` becomes `12,500`. Keep the exact integer;
+do not abbreviate it as K/M or 万/亿, round it, or change raw numeric accounting
+records. This applies to total and orchestrator-only counts. Counts below 1,000
+remain unchanged.
+
+English template:
 
 `Token usage: total <tokens>; Elapsed time: <formatted duration>; Subagents created: <count>.`
 
@@ -315,16 +333,30 @@ For example, a duration under one hour is `Elapsed time: about 8 minutes`;
 a longer duration is `Elapsed time: about 2 hours 8 minutes`.
 When only exclusive orchestrator accounting is available, use:
 
-`Token usage: orchestrator-only 12500 (subagent usage incomplete); Elapsed time: about 8 minutes; Subagents created: 2.`
+`Token usage: orchestrator-only 12,500 (subagent usage incomplete); Elapsed time: about 8 minutes; Subagents created: 2.`
 
 When a metric cannot be established, replace only that metric's value with
 `unavailable (<specific reason>)`. For example:
 
 `Token usage: total unavailable (host does not expose complete task usage); Elapsed time: about 8 minutes; Subagents created: 2.`
 
+Chinese examples (format examples only; never reuse these numbers as usage):
+
+`Token 用量：总计 21,910,071；耗时：约 19 分钟；创建子代理：4 个。`
+
+`Token 用量：仅主代理 12,500（子代理用量不完整）；耗时：约 8 分钟；创建子代理：2 个。`
+
+`Token 用量：总计不可用（缺少完整任务用量记录）；耗时：约 1 小时 8 分钟；创建子代理：2 个。`
+
+Apply the same duration rules in every language: below 60 minutes omit the hours
+component (for example, `约 8 分钟`, never `约 0 小时 8 分钟`). The English metric
+labels and unavailable examples elsewhere in this section describe semantics;
+translate them in the final line as illustrated above.
+
 Before sending final, check that all three metrics are present, numeric values
-have evidence and the correct task scope, unavailable values have reasons, and
-the statistics line is the final content. If any check fails, fix the summary
+have evidence and the correct task scope, token counts use thousands separators,
+labels and explanations match the conversation language, unavailable values have
+reasons, and the statistics line is the final content. If any check fails, fix the summary
 before sending. Never omit the entire completion-statistics line.
 
 Read [references/adapters.md](references/adapters.md#token-accounting) for

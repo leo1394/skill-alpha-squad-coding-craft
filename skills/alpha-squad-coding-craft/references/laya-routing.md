@@ -7,6 +7,11 @@ must accept `squad` and role advice must return `advice.delegation`. If either i
 missing, unavailable or fails, explain and use Alpha Squad's standalone manual
 flow. Do not require Laya for standalone work or automatically install it.
 
+When routing returns a `decision_id`, recording has separate explicit consent,
+and a compatible `laya_feedback` tool is available, read
+[laya-feedback.md](laya-feedback.md) before the first routed spawn. Feedback
+availability never gates routing or task execution.
+
 ## One-window configuration
 
 The orchestrator stays on the verified current-session model and reasoning.

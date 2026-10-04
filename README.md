@@ -148,6 +148,12 @@ MCP does not spawn agents or grant execution permissions. Missing or incompatibl
 Laya falls back to standalone manual selection. Oh My Laya installs this skill
 from this repository's latest default branch; there is no duplicated skill source.
 
+If Laya exposes its optional feedback tool, Alpha Squad can submit redacted
+assignment, test, review, outcome, user-choice, and usage events under separate
+recording consent. Feedback delivery is durable and idempotent when supported;
+missing feedback capability never blocks the coding workflow. See the
+[feedback protocol](skills/alpha-squad-coding-craft/references/laya-feedback.md).
+
 For every user-started task while the skill is active, its first task-status
 sentence prints one compact assignment line with the exact model and reasoning
 names for all roles. This repeats for later tasks in the same chat or session,
@@ -163,9 +169,14 @@ their work results without a telemetry form. On local Codex the bundled
 and descendants, deduplicates repeated records, and checks coverage against the
 spawn ledger. No active Goal is required.
 
-The final line includes total tokens, elapsed time and newly created subagents:
+The final line includes total tokens, elapsed time and newly created subagents.
+Use the current conversation language for labels, duration units and reasons;
+format token counts with comma thousands separators without rounding. English
+template:
 
 `Token usage: total <tokens>; Elapsed time: <formatted duration>; Subagents created: <count>.`
+
+Chinese example: `Token 用量：总计 21,910,071；耗时：约 19 分钟；创建子代理：4 个。`
 
 Totals are through the last observed checkpoint; the current final reply and
 unflushed usage are not included. Cached/reasoning tokens are not added twice.

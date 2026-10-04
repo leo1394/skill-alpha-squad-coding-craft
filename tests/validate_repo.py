@@ -148,8 +148,10 @@ def validate_skill() -> None:
     assert "Elapsed time: <formatted duration>" in body
     assert "Subagents created: <count>." in body
     assert "Subagents created: 0" in body
-    assert "Token usage：" not in body
-    assert "Subagents created：" not in body
+    assert "comma thousands separators" in body
+    assert "Use the language of the current conversation" in body
+    assert "Token 用量：总计 21,910,071；耗时：约 19 分钟；创建子代理：4 个。" in body
+    assert "exactly one English statistics line" not in body
     assert "Do not count failed spawn attempts" in body
     assert "Open ONE native structured window" in body
     assert "Step 1 — orchestrator, reviewer" in body
