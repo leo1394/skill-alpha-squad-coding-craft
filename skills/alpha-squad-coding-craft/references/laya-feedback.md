@@ -52,6 +52,12 @@ versions or capability rankings from model names. Preserve optional assignment
 `parent_attempt_ref`, `change_reason`, `mixed_configuration`, and a concise
 redacted `environment` when actually observed.
 
+When the live schema accepts versioned `payload.execution`, an additional
+post-spawn assignment can carry the actual dispatch receipt described in
+[laya-execution.md](laya-execution.md). The pre-spawn assignment above is not a
+started receipt. Preserve both events and all original scores; never overwrite
+the requested/effective distinction or upgrade unknowns to observed facts.
+
 Example:
 
 ```json
@@ -351,6 +357,7 @@ tool schema.
       "additionalProperties": false,
       "required": ["recommended", "selected", "requested", "effective", "reason", "evidence_refs"],
       "properties": {
+        "execution": {"type": "object", "required": ["contract"], "properties": {"contract": {"const": "dispatch_receipt_v1"}}},
         "recommended": {"oneOf": [{"$ref": "#/$defs/assignment_pair"}, {"type": "null"}]},
         "selected": {"oneOf": [{"$ref": "#/$defs/assignment_pair"}, {"type": "null"}]},
         "requested": {"oneOf": [{"$ref": "#/$defs/assignment_pair"}, {"type": "null"}]},
@@ -368,6 +375,14 @@ tool schema.
       "type": "object",
       "required": ["scores"],
       "properties": {"scores": {"$ref": "#/$defs/scores"}}
+    },
+    "execution_outcome_payload": {
+      "type": "object",
+      "required": ["execution"],
+      "properties": {
+        "execution": {"type": "object", "required": ["contract"], "properties": {"contract": {"const": "attempt_outcome_v1"}}},
+        "scores": {"$ref": "#/$defs/scores"}
+      }
     }
   },
   "allOf": [
@@ -376,8 +391,12 @@ tool schema.
       "then": {"properties": {"payload": {"$ref": "#/$defs/assignment_payload"}}}
     },
     {
-      "if": {"properties": {"kind": {"enum": ["test", "review", "outcome"]}}},
+      "if": {"properties": {"kind": {"enum": ["test", "review"]}}},
       "then": {"properties": {"payload": {"$ref": "#/$defs/scored_payload"}}}
+    },
+    {
+      "if": {"properties": {"kind": {"const": "outcome"}}},
+      "then": {"properties": {"payload": {"anyOf": [{"$ref": "#/$defs/scored_payload"}, {"$ref": "#/$defs/execution_outcome_payload"}], "allOf": [{"if": {"required": ["execution"]}, "then": {"$ref": "#/$defs/execution_outcome_payload"}}]}}}
     }
   ]
 }
@@ -389,3 +408,6 @@ The portable schema intentionally validates only shared score fields for
 kind-specific payload schema. `user_choice` and `usage` may have no score. Always
 prefer the live schema when it is stricter, and treat a schema mismatch as a
 recording failure rather than weakening or guessing fields.
+Versioned execution extensions are checked here only for their contract tag;
+all execution fields, bounds and references require the live schema and service.
+An outcome may reference an already-preserved first score instead of repeating it.

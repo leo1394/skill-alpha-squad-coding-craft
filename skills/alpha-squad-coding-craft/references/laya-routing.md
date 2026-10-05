@@ -51,6 +51,42 @@ than silently splitting the flow. Keep async input pending until actual submissi
 
 ## Before a necessary spawn
 
+### Opt-in structured orchestration
+
+Use this path only when the user is testing the versioned efficiency policy and
+the live tool advertises `orchestration`; otherwise retain the existing flow.
+Send `orchestration` alongside `advisor`, not inside the inference state:
+
+```json
+{"schema_version":1,"enabled":true,"run_id":"<stable local run ID>","stage_id":"<bounded stage ID>","snapshot_revision":"<task snapshot revision>","independent_work":false,"dependencies_known":true,"required_roles":[],"constraint_refs":["<applicable constraint reference>"]}
+```
+
+Keep run, stage and snapshot IDs stable for the same factual task. Change the
+snapshot when scope, files or evidence changes; never replace evidence with an
+ID alone. Set independent work and dependency status from the actual task, not
+from a desire to use more agents. Preserve roles explicitly required by the
+user or applicable Skill. A parent assessment does not classify different child
+tasks. Same-snapshot role calls may reuse raw assessment inside the worker, but
+each returned role route still needs current authorization and host validation.
+
+Consume `orchestration_plan` directly; do not ask another model to rewrite it.
+`direct` means no optional child; required validation still runs. `delegate`
+permits considering only required roles with useful bounded work, not spawning
+the whole role list mechanically. `needs_context` means obtain the missing
+evidence or conservatively handle the task; it is not a request for more agents.
+Reviewer obligations remain even while clarification is pending. Plans never
+grant execution permission or override a user/Skill constraint. Conflicts need
+resolution, not silent omission of the stronger constraint.
+
+If the response marks orchestration unsupported, use the ordinary delegation
+gate and report that structured coverage is unavailable. A `stale_assessment`
+error requires reconciling changed evidence or policy before a new request with
+a new request ID; do not dispatch from the rejected result or blindly retry.
+Retain the returned decision ID and `reused_from_decision_id` for evidence.
+Cached raw Laya usage describes its source evaluation, not fresh inference.
+For this opt-in policy, read [laya-execution.md](laya-execution.md) before the
+first dispatch for the stage ledger, bounded retry check and actual receipts.
+
 Apply Alpha Squad's delegation gate first. Assess each bounded subtask (or reuse
 an identical assessment only while scope, policy and model availability match).
 Call `laya_tell_me` with a short factual state and:
@@ -107,6 +143,20 @@ configuration for model overrides that would defeat the chosen pair; never
 rewrite existing role files automatically. Distinguish the requested assignment
 from the effective one. If the host cannot verify the effective assignment,
 report that limitation and do not claim routing succeeded or start affected work.
+
+For isolated dispatch, include only the objective, role, relevant file/symbol
+references, applicable safety/user/AGENTS constraints, dependency summaries,
+acceptance checks and known run/stage/decision/attempt IDs. References must be
+readable by the child. Do not copy full chat history, repository scans or raw
+tool logs by default. If the packet is too large for the verified host window,
+compress by relevance without silently truncating constraints; unknown token
+capacity stays unknown and byte counts are not native tokens. Record actual
+context isolation as unsupported/unknown unless the host verifies it; a requested
+`fork_turns` value alone does not prove effective isolation or token savings.
+
+Keep handoffs to conclusions, changed/evidence locations, test results, risks,
+next actions and original feedback receipts. Preserve a child's first score
+before summarizing its handoff; never fabricate it from the parent's judgment.
 
 On each new task announce exact resolved initial assignments using separate
 orchestrator, reviewer and execution-role entries when reviewer differs. Before
