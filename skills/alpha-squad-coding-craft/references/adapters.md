@@ -102,6 +102,14 @@ the host exposes none.
 
 ### Lifecycle verification
 
+Verify the four standalone steps are sent in one tool call and rendered in one
+popup. Advance to reasoning, go back to change the model, then revisit the
+earlier fields from Final confirmation. Draft answers must survive navigation,
+and the submitted pair must reflect the latest edits and pass host validation.
+No new popup may be created for backward navigation. A tool that accepts four
+questions does not by itself prove the client supports backward editing;
+verify that UI separately and report it unverified when not observed.
+
 For a live host check, leave the window untouched for more than 60 seconds,
 then submit it. Verify the window remains usable, there is only one request
 in total, no final response precedes submission, and no work starts before

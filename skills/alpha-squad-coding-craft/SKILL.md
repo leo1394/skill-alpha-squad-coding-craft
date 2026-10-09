@@ -175,6 +175,26 @@ until the user selects it and submits the window.
 
 ## Structured input lifecycle
 
+The standalone selection is exactly ONE popup with FOUR ordered steps:
+current-session confirmation, execution-role model, execution-role reasoning,
+and Final confirmation. Submit all four in ONE structured tool request; never
+issue one request per step or append a separate confirmation popup.
+
+Before final submission, users must be able to revisit and edit Steps 1–3
+inside that same popup, including returning from the final step. Use the host's
+Back/Next navigation or in-place editable fields; preserve draft answers when
+moving between steps. Moving forward is not approval. Only the latest complete
+submitted answers with Confirm and continue count. Revalidate the model/effort
+pair after any revision; never retain an incompatible effort silently.
+
+Check the tool's question limit and the host's edit/navigation support before
+opening the popup. If four fields or same-popup revision cannot be supported,
+report the UI limitation and wait; do not split the flow into multiple popups,
+invent navigation APIs, or claim this Skill changes the client's UI. This is
+not grounds to bypass confirmation or silently enter single-model mode.
+The optional Laya setup has additional fields but follows the same single-popup
+and editable-before-confirmation contract.
+
 Before opening the window, inspect the input tool's current availability
 and response semantics. A blocking tool waits for submitted answers; an async
 tool only acknowledges that the request was created. Do not call a tool that
