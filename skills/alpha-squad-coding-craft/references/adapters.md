@@ -5,6 +5,8 @@ provider-specific model IDs into `SKILL.md`.
 
 ## Codex
 
+Apply the core capability gate first; the setup below is for native-squad mode.
+
 Personal custom agents are standalone TOML files under `~/.codex/agents/`;
 project-scoped agents use `.codex/agents/`. A role file can omit `model` and
 `model_reasoning_effort`, allowing the host's spawn configuration or parent
@@ -25,8 +27,8 @@ Claude Code plugins use Markdown agent definitions. This repository places the
 five role definitions in the plugin root `agents/` directory and omits model
 frontmatter so a session choice is never persisted globally. Before delegating,
 verify that the active Claude host can enumerate, bind, and report a per-agent
-model and reasoning combination. If it cannot, stop at the selection gate and
-report the limitation.
+model and reasoning combination. If it cannot, use the
+[single-model role workflow](single-model.md) without a model-selection gate.
 
 Reference: <https://claude.com/docs/plugins/overview>
 
@@ -47,6 +49,9 @@ References:
 - <https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/capability-seams.md>
 
 ## Selection UI
+
+This section applies only after the native-squad capability gate succeeds.
+Single-model roles skip this model-selection UI rather than request fake choices.
 
 Hosts differ in popup APIs, permissions, model identifiers, and reasoning
 controls. On Codex, inspect the tools exposed for the current mode. Prefer

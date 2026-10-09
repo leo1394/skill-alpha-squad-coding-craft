@@ -3,7 +3,8 @@ name: alpha-squad-coding-craft
 description: >-
   Coordinate complex coding work with specialized exploration,
   implementation, testing, research, and review agents while selecting only
-  models and reasoning controls supported by the current host.
+  models and reasoning controls supported by the current host. Fall back to
+  sequential single-model roles when delegation or model controls are unavailable.
 ---
 
 # Alpha Squad Coding Craft
@@ -16,7 +17,26 @@ verify, and report the result. Use these role names in prompts and logs.
 
 ## First activation
 
-Identify the current host and its native delegation mechanism.
+Identify the current host and its native delegation mechanism before bootstrap
+or model selection. Check the actual tools available in this conversation, not
+the product name or subscription tier.
+
+- **Native squad:** the host can create and await subagents, expose supported
+  model/effort choices, apply them, and verify effective assignments and the
+  current session pair. Use the selection and delegation rules below.
+- **Single-model roles:** any of those capabilities is absent or cannot be
+  verified. Keep the current session unchanged and execute necessary roles in
+  sequence. Read [references/single-model.md](references/single-model.md).
+  This mode replaces the bootstrap, model-selection popup, exact-pair
+  announcement and native-delegation requirements below; it does not replace
+  task permissions or any stronger user requirement for independent review.
+
+Unknown model metadata does not block single-model work. Never ask the user to
+invent a model identity or select controls the host cannot apply. A pending or
+cancelled selection, rejected permission, temporary capacity error, or failed
+task is not evidence of missing capability and must not trigger this fallback.
+Recheck capabilities on a new task or a host change. Do not switch back to
+native delegation mid-task without its selection and confirmation gate.
 
 On a local Codex host, check `CODEX_HOME` or `~/.codex` for these files when
 this skill is first activated:
@@ -38,6 +58,8 @@ Read [references/adapters.md](references/adapters.md) when host-specific setup
 is needed.
 
 ## Model and reasoning selection
+
+This section and Structured input lifecycle apply to native-squad mode only.
 
 The standalone flow below requires no Laya installation. If the user requests
 Laya routing, first check that `laya-model-advisor` and compatible
@@ -193,9 +215,10 @@ from separate context. Delegate when any of these conditions apply:
 - an independent review materially improves confidence
 - the user explicitly asks for agents, delegation, or parallel work
 
-When delegation is required but the host has no subagent capability, state the
-limitation and continue only when the user's request permits a single-agent
-fallback.
+When native delegation or verifiable model/effort controls are unavailable, use
+single-model roles as defined above. If the user specifically requires real
+parallel agents or an independent reviewer, disclose that requirement cannot be
+met and ask whether sequential self-review is acceptable; do not silently waive it.
 
 ## Roles
 
@@ -224,9 +247,11 @@ subsystem unless the orchestrator explicitly coordinates shared ownership.
    decisions. Finish with the mandatory completion summary below, even when
    native token accounting is unavailable.
 
-Run independent tasks in parallel and dependent tasks in order. Do not spawn
+In native-squad mode, run independent tasks in parallel and dependent tasks in order. Do not spawn
 every role mechanically. Do not claim an agent contributed unless the host
 actually started that role and returned a result.
+In single-model mode, perform necessary role passes sequentially; testing and
+review are verification and self-review, not independent agent work.
 
 ## Completion summary (mandatory)
 

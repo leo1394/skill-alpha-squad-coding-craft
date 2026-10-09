@@ -7,6 +7,8 @@ roles without embedding provider-specific model identifiers.
 ## Features
 
 - One provider-neutral `SKILL.md` core.
+- Capability-based fallback to sequential single-model roles for web AI chats
+  and other hosts without subagents or controllable model/reasoning settings.
 - Codex role templates with no `model` or `model_reasoning_effort` fields.
 - Claude-compatible Markdown agent definitions.
 - Safe first-use Codex bootstrap that preserves existing user files.
@@ -103,6 +105,10 @@ actual harness must provide skill loading, delegation, and user questions.
 
 ## Model selection
 
+These selection steps apply only to native-squad mode. When subagent capability
+or verifiable model/reasoning control is missing, the skill keeps the current
+session unchanged and uses sequential roles without a model-selection popup.
+
 The skill enumerates the models and reasoning controls exposed by the current
 host. It never assumes that a named model exists. On first activation in every
 new session, ONE native window contains current-session confirmation, execution
@@ -136,6 +142,25 @@ Alpha Squad works independently; Laya is not required. With Oh My Laya and
 ```text
 Use $alpha-squad-coding-craft with $laya-model-advisor to configure subagent routing.
 ```
+
+### Web AI chats and limited hosts
+
+This workflow is provider-neutral: ChatGPT, Grok, DeepSeek, Gemini and similar
+web AI chats are examples, not a fixed compatibility list. Choose the execution
+mode from the conversation's actual capabilities, never its brand. Mentioning
+a service does not imply a verified native integration or skill installer.
+
+Make `skills/alpha-squad-coding-craft/SKILL.md` and its referenced resources
+accessible to the conversation through the host's supported skill/file mechanism.
+A local Codex installation is not automatically available in a web conversation.
+Then ask to use Alpha Squad for your task. The skill checks conversation tools,
+not whether you are using a browser: capable hosts use native agents; otherwise
+the current model sequentially plans, explores, works, tests and self-reviews.
+Missing tools remain explicit limitations. No child model selection is shown in
+this mode, no subagents are created, and self-review is not independent review.
+See the [single-model workflow](skills/alpha-squad-coding-craft/references/single-model.md).
+
+### Native Laya routing behavior
 
 The same setup window includes policy, execution model/effort ceiling, reviewer
 model/effort, and final confirmation. The orchestrator never changes. Execution
