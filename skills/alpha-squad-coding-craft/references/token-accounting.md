@@ -57,6 +57,12 @@ Laya persistence, follow [laya-feedback.md](laya-feedback.md#codex-usage-deliver
 only exact, confirmed execution bindings can become attempt usage events. The
 collector does not submit feedback or grant recording consent.
 
+For an executable registration-to-delivery path, use
+[laya-usage-lifecycle.md](laya-usage-lifecycle.md). It persists the exact task
+scope and root/child bindings, calls this collector and the existing preparer,
+and preserves events before MCP delivery. Its bounded finalizer can continue
+collection after the root reply without claiming that quiet logs prove a flush.
+
 Segments may also expose `native_components`: validated input/output sums,
 minimum/maximum per-response input counts and a separate component checkpoint.
 These are optional metadata, not extra tokens to add to `total_tokens`. Missing,

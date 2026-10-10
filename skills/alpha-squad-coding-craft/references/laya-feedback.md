@@ -122,6 +122,13 @@ dependency is retryable; retransmit the unchanged event after its predecessor.
 
 ### Codex usage delivery
 
+Use the executable [durable usage lifecycle](laya-usage-lifecycle.md) for normal
+task execution: register before dispatch, bind verified root/child native turns,
+checkpoint, and finalize on the same ledger. It calls the collector/preparer
+described below and native `laya_feedback` through `laya mcp`; it does not grant
+consent or replace the assignment/first-score workflows. The manual preparation
+interface below remains useful for inspection and compatibility.
+
 When routing has a recorded decision and recording consent remains enabled, the
 parent prepares usage after the relevant child finishes. Use the scoped native
 collector from [token-accounting.md](token-accounting.md); do not ask the child

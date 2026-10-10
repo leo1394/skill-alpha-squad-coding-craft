@@ -297,6 +297,17 @@ not only when its result arrives. A created child that later fails still counts.
 Do not count failed spawn attempts as created subagents, but include their token
 usage when native accounting attributes consumed tokens to this task.
 
+When optional Laya recording is separately authorized on Codex, use the durable
+[usage lifecycle](references/laya-usage-lifecycle.md): register the explicit root
+task decision and each child's own decision/attempt before dispatch, bind verified
+native identities immediately afterwards, and checkpoint after children finish.
+Resumed turns need separate registrations. Persist prepared events before native
+feedback delivery and retain receipts. Launch bounded final collection before
+the root reply when supported, then inspect or resume the same ledger after its
+usage flush. Missing decisions, bindings, consent, tools or final evidence remain
+visible limitations; they never block ordinary task work or justify enabling
+recording. Preserve all selection and consent gates above.
+
 ### Parent-owned token collection
 
 The orchestrator collects native usage AFTER children complete. Subagents return
